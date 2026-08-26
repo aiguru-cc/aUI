@@ -9,6 +9,7 @@ from typing import List, Optional
 
 from ..core.components import (
     Button,
+    DatePicker,
     Divider,
     Form,
     Image,
@@ -74,6 +75,8 @@ class AsciiBackend:
             self._hline(x, y, min(size.width, self.width - x))
         elif isinstance(view, Image):
             self._put(x, y, "(img)")
+        elif isinstance(view, DatePicker):
+            self._put(x, y, "[ " + view.title + " " + view._current() + " ]")
         elif isinstance(view, Stepper):
             self._put(x, y, "[- " + view.title + " +]")
         elif isinstance(view, ProgressView):

@@ -6,6 +6,7 @@ from .core.view import View, ViewModifier
 from .core.layout import HStack, Spacer, VStack, ZStack
 from .core.components import (
     Button,
+    DatePicker,
     Divider,
     Form,
     Group,
@@ -45,7 +46,7 @@ __all__ = [
     # layout
     "HStack", "Spacer", "VStack", "ZStack",
     # components
-    "Button", "Divider", "Form", "Group", "Image", "List", "NavigationStack",
+    "Button", "DatePicker", "Divider", "Form", "Group", "Image", "List", "NavigationStack",
     "Picker", "ProgressView", "Slider", "Stepper", "Text", "TextField", "Toggle",
     # modifiers
     "background", "border", "corner_radius", "font", "foreground_color",

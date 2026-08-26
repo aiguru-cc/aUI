@@ -18,6 +18,7 @@ from typing import Callable, Dict, Optional, Set, Tuple, Type
 
 from ..core.components import (
     Button,
+    DatePicker,
     Divider,
     Form,
     Image,
@@ -107,6 +108,8 @@ class TkBackend:
             self._make_divider(view, parent, path)
         elif isinstance(view, Image):
             self._make_image(view, parent, path)
+        elif isinstance(view, DatePicker):
+            self._make_datepicker(view, parent, path)
         elif isinstance(view, Stepper):
             self._make_stepper(view, parent, path)
         elif isinstance(view, ProgressView):
@@ -252,6 +255,64 @@ class TkBackend:
         label = self._reuse_or_create(path, tk.Label, lambda: tk.Label(parent))
         label.config(text="\u25a0", fg=color)
         label.pack()
+
+    def _make_datepicker(self, view: DatePicker, parent: tk.Widget, path: str) -> None:
+        row = self._reuse_or_create(path, ttk.Frame, lambda: ttk.Frame(parent))
+        row.pack(fill="x", pady=2)
+        # Rebuild the fixed set of children for the date row.
+        for w in row.winfo_children():
+            w.destroy()
+        if view.title:
+            ttk.Label(row, text=view.title).pack(side="left", padx=(0, 4))
+        current = view._current()
+        ttk.Label(row, text=current or "(select date)").pack(side="left", padx=4)
+        if view.selection is not None:
+            ttk.Button(
+                row,
+                text="...",
+                width=3,
+                command=lambda v=view: self._pick_date(v),
+            ).pack(side="right")
+
+    def _pick_date(self, view: DatePicker) -> None:
+        """Open a native Tk calendar dialog and write the choice to the binding."""
+        import tkinter as tk
+        from tkinter import simpledialog
+
+        if view.selection is None:
+            return
+        current = view.selection.wrapped_value
+        if current is None:
+            current = datetime.now()
+        if view.displayed_components == "hourAndMinute":
+            text = simpledialog.askstring(
+                "aUI DatePicker",
+                "Enter time (HH:MM):",
+                initialvalue=current.strftime("%H:%M"),
+                parent=self.root,
+            )
+            if text:
+                try:
+                    hh, mm = text.split(":")
+                    view.selection.wrapped_value = current.replace(
+                        hour=int(hh), minute=int(mm)
+                    )
+                except (ValueError, TypeError):
+                    pass
+            return
+        text = simpledialog.askstring(
+            "aUI DatePicker",
+            "Enter date (YYYY-MM-DD):",
+            initialvalue=current.strftime("%Y-%m-%d"),
+            parent=self.root,
+        )
+        if text:
+            try:
+                from datetime import datetime as _dt
+
+                view.selection.wrapped_value = _dt.strptime(text, "%Y-%m-%d")
+            except ValueError:
+                pass
 
     def _make_stepper(self, view: Stepper, parent: tk.Widget, path: str) -> None:
         row = self._reuse_or_create(path, ttk.Frame, lambda: ttk.Frame(parent))

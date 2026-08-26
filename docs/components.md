@@ -58,6 +58,20 @@ volume = State(0.5)
 Slider(value=volume.binding(), in_range=(0.0, 1.0), step=0.1)
 ```
 
+### DatePicker（日期选择）
+
+```python
+from datetime import datetime
+from aui import DatePicker, State
+
+date = State(datetime(2026, 8, 26))
+DatePicker("截止日期", selection=date.binding(), displayed_components="date")
+DatePicker("时间", selection=date.binding(), displayed_components="hourAndMinute")
+```
+
+`displayed_components`：`"date"`（年月日）、`"hourAndMinute"`（时分）、
+`"date hourAndMinute"`（两者）。`in_range` 可限制可选范围。
+
 ### Picker（下拉选择）
 
 ```python

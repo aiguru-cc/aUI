@@ -16,6 +16,7 @@ from typing import Callable, Dict, List as TList, Optional, Tuple
 
 from ..core.components import (
     Button,
+    DatePicker,
     Divider,
     Form,
     Image,
@@ -126,7 +127,7 @@ class CursesBackend:
         # Record the frame of leaf components.
         if isinstance(
             view,
-            (Button, TextField, Toggle, Slider, Picker, Divider, Image, Text, Stepper, ProgressView),
+            (Button, TextField, Toggle, Slider, Picker, Divider, Image, Text, Stepper, ProgressView, DatePicker),
         ):
             self._frames[id(view)] = (origin, size)
             if isinstance(view, Button):
@@ -296,6 +297,9 @@ class CursesBackend:
             grid.hline(x, y, fw)
         elif isinstance(view, Image):
             grid.put(x, y, "(img)")
+        elif isinstance(view, DatePicker):
+            label = f"[ {view.title} {view._current()} ]"
+            grid.put(x, y, label[: max(0, fw)])
         elif isinstance(view, Stepper):
             label = f"[- {view.title} +]"
             grid.put(x, y, label[: max(0, fw)])

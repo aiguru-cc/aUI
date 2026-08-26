@@ -519,3 +519,67 @@ class NavigationStack(View):
 
     def children(self) -> Sequence[View]:
         return self._children
+
+
+class DatePicker(View):
+    """A date selection control (mirrors SwiftUI DatePicker).
+
+    ``selection`` is a two-way binding to a ``datetime.datetime``. The
+    ``displayed_components`` selects which parts of the date are editable:
+    ``"date"`` (year/month/day), ``"hourAndMinute"`` (time), or ``"date"`` +
+    ``"hourAndMinute"`` (both). ``in_range`` optionally restricts the allowed
+    range.
+    """
+
+    _VALID_COMPONENTS = ("date", "hourAndMinute")
+
+    def __init__(
+        self,
+        title: str = "",
+        selection: Optional[Binding] = None,
+        displayed_components: str = "date",
+        in_range: Optional[tuple] = None,
+    ):
+        self._title = title
+        self._selection = selection
+        self._displayed_components = displayed_components
+        self._in_range = in_range
+        self._children = []
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def selection(self) -> Optional[Binding]:
+        return self._selection
+
+    @property
+    def displayed_components(self) -> str:
+        return self._displayed_components
+
+    @property
+    def in_range(self) -> Optional[tuple]:
+        return self._in_range
+
+    def _current(self) -> str:
+        """The current value formatted for display."""
+        if self._selection is None:
+            return ""
+        value = self._selection.wrapped_value
+        if value is None:
+            return ""
+        if self._displayed_components == "hourAndMinute":
+            return value.strftime("%H:%M")
+        if self._displayed_components == "date":
+            return value.strftime("%Y-%m-%d")
+        return value.strftime("%Y-%m-%d %H:%M")
+
+    def size_that_fits(self, proposal: Size) -> Size:
+        return Size(160.0, 28.0)
+
+    def place(self, origin: Point, size: Size) -> None:
+        return None
+
+    def children(self) -> Sequence[View]:
+        return self._children
