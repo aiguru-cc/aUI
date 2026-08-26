@@ -6,7 +6,7 @@ aUI 是一个基于 Python 的声明式 UI 库，复刻 SwiftUI 的语法与功�
 
 - **声明式**：用视图树描述 UI，而非命令式操作控件。
 - **状态驱动**：状态变化自动触发视图刷新。
-- **零依赖**：默认后端为 Tkinter（CPython 自带）。
+- **零依赖**：后端均为 Python 标准库（Tkinter / curses），无第三方依赖。
 - **可测试**：布局与状态逻辑可在无显示环境运行。
 
 ## 分层
@@ -25,7 +25,8 @@ aUI 是一个基于 Python 的声明式 UI 库，复刻 SwiftUI 的语法与功�
 ├─────────────────────────────────────────────┤
 │ aui.backends（渲染后端，依赖 core）           │
 │  ├─ ascii: 无头 ASCII 渲染（测试/文档）       │
-│  └─ tk:    Tkinter 原生控件渲染               │
+│  ├─ tk:    Tkinter 原生控件渲染               │
+│  └─ curses: 终端交互 UI（零依赖，推荐默认）    │
 └─────────────────────────────────────────────┘
 ```
 
@@ -54,13 +55,20 @@ aUI 是一个基于 Python 的声明式 UI 库，复刻 SwiftUI 的语法与功�
 整树重建（full re-render）：状态变更 → 后端重建视图树 → 重建控件。
 详见 [ADR-0003](adr/0003-render-strategy.md)。
 
+### 5. 后端选型
+
+- **curses**（推荐默认）：零依赖、无显示服务器、终端交互。
+- **Tkinter**：原生窗口控件，需 Python 编译 Tk 支持。
+- **ASCII**：无头渲染，用于测试与文档。
+详见 [ADR-0004](adr/0004-curses-backend.md)。
+
 ## 目录结构
 
 ```
 src/aui/
 ├── __init__.py      # 公开 API 再导出
 ├── core/            # 无 GUI 核心（geometry/view/state/layout/components/modifiers）
-└── backends/        # ascii.py / tk.py
+└── backends/        # ascii.py / tk.py / curses.py
 docs/
 ├── adr/             # 架构决策记录
 ├── architecture.md  # 本文档
@@ -73,3 +81,4 @@ docs/
 - [ADR-0001 架构与设计原则](adr/0001-architecture.md)
 - [ADR-0002 包结构与模块划分](adr/0002-package-structure.md)
 - [ADR-0003 状态驱动渲染策略](adr/0003-render-strategy.md)
+- [ADR-0004 后端选型 — curses 终端后端](adr/0004-curses-backend.md)

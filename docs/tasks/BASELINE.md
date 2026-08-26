@@ -18,6 +18,7 @@
 - [x] T8 修饰符：`padding/background/foregroundColor/font/border/cornerRadius/opacity/hidden/frame/onTapGesture`
 - [x] T9 组件：`Text/Button/TextField/Toggle/Slider/Picker/Image/Divider/List/Group`
 - [x] T10 渲染后端：`AsciiBackend`（无头）、`TkBackend`（Tkinter）
+- [x] T10b 渲染后端：`CursesBackend`（终端交互，零依赖，ADR-0004）
 
 ## 阶段 3：验证与治理（已建立）
 
@@ -27,6 +28,7 @@
 - [x] T14 文档库（`docs/architecture.md`、`docs/components.md`、`docs/guide.md`）
 - [x] T15 基线任务清单（本文档）
 - [x] T16 协作系统计划任务（`.aiguru` task-create）
+- [x] T16b curses 后端测试与示例（`tests/test_curses_backend.py`、`examples/counter_curses.py`）
 
 ## 阶段 4：演进（待办）
 

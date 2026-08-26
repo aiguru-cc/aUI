@@ -9,6 +9,7 @@ aUI 项目文档索引。
 | [0001](adr/0001-architecture.md) | 架构与设计原则 | 已接受 |
 | [0002](adr/0002-package-structure.md) | 包结构与模块划分 | 已接受 |
 | [0003](adr/0003-render-strategy.md) | 状态驱动渲染策略 | 已接受 |
+| [0004](adr/0004-curses-backend.md) | 后端选型 — curses 终端后端 | 已接受 |
 
 ## 文档
 

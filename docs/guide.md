@@ -56,7 +56,42 @@ backend.mainloop()
 .venv/bin/python examples/counter_tk.py
 ```
 
-> Tkinter 后端需要图形显示环境（macOS 桌面 / X11 / Windows）。
+> Tkinter 后端需要图形显示环境（macOS 桌面 / X11 / Windows），且 Python
+> 需编译 Tk 支持（Homebrew 的 `python-tk`）。若 `import tkinter` 报
+> `No module named '_tkinter'`，请改用 curses 后端。
+
+### 终端交互（curses 后端，推荐默认）
+
+```python
+from aui import Text, Button, VStack, State
+from aui.backends.curses import CursesBackend
+
+state = State(0)
+
+def make_view():
+    return VStack([
+        Text(f"Count: {state.wrapped_value}"),
+        Button("Increment", action=lambda: state._set(state.wrapped_value + 1)),
+    ], spacing=1)
+
+CursesBackend(make_view).run()
+```
+
+运行示例：
+
+```bash
+.venv/bin/python examples/counter_curses.py
+```
+
+操作：`Tab/↑/↓` 切换输入框焦点，打字编辑，`Enter` 确认，`q` 退出。
+curses 后端零依赖、无需显示服务器，任何终端均可运行。
+
+无头预览（无需终端）：
+
+```python
+from aui.backends.curses import CursesBackend
+print(CursesBackend(make_view).render_to_string(80, 15))
+```
 
 ## 状态管理
 
