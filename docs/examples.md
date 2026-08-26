@@ -32,6 +32,8 @@ python3 examples/<name>.py
 | 示例 | 展示内容 | 运行 |
 |---|---|---|
 | [counter_tk.py](../examples/counter_tk.py) | 计数器 Tk 窗口 | `python3 examples/counter_tk.py` |
+| [gestures_tk.py](../examples/gestures_tk.py) | 手势：点击/长按/拖拽 | `python3 examples/gestures_tk.py` |
+| [animation_tk.py](../examples/animation_tk.py) | 动画：颜色过渡 | `python3 examples/animation_tk.py` |
 
 > Tk 示例需要 Python 编译 Tk 支持（`import tkinter` 可用）。
 
@@ -42,5 +44,6 @@ python3 examples/<name>.py
 | `Tab` / `↑` / `↓` | 切换输入框焦点 |
 | 打字 | 编辑当前输入框 |
 | `Backspace` | 删除字符 |
-| `Enter` | 确认输入框 |
+| `Enter` | 确认输入框 / 激活选中的 tappable 区域 |
+| `t` | 循环选中可点击区域（配合 Enter 激活） |
 | `q` / `Q` | 退出 |

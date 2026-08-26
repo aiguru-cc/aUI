@@ -35,7 +35,7 @@
 - [x] T17 增量渲染（视图身份 + diff 复用控件，ADR-0005）
 - [x] T18 精确文本测量与换行（多行/单词换行/CJK 双宽/line_limit/line_spacing）
 - [x] T19 动画与过渡
-- [ ] T20 手势系统（拖拽、长按）
+- [x] T20 手势系统（tap/long-press/drag，ADR-0007）
 - [ ] T21 `List` 懒加载与滚动
 - [ ] T22 更多后端（Qt / 终端）
 - [x] T23 更多 SwiftUI 组件（`Stepper`✅、`DatePicker`✅、`ProgressView`✅、`Form`✅、`NavigationStack`✅）

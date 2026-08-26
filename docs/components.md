@@ -206,6 +206,36 @@ with with_animation(Animation.ease_in_out(0.4)):
 - 仅 Tk 后端支持帧驱动动画（颜色过渡）；ASCII/curses 忽略 `.animation()`
 - 详见 [ADR-0006](adr/0006-animation.md)
 
+## 手势（Gestures）
+
+声明式手势修饰符，由渲染后端检测原生事件并触发回调。手势不影响布局。
+
+| 手势 | 修饰符 | 回调签名 | 触发方式 |
+|---|---|---|---|
+| 点击 | `on_tap_gesture(view, action)` | `() -> None` | 单击 |
+| 长按 | `on_long_press_gesture(view, action, minimum_duration=0.5)` | `() -> None` | 按住超过时长 |
+| 拖拽 | `on_drag_gesture(view, action, minimum_distance=10.0)` | `(start, current) -> None` | 拖动超过最小距离 |
+
+```python
+from aui import Text, on_tap_gesture, on_long_press_gesture, on_drag_gesture, Color, padding, background
+
+# 点击
+on_tap_gesture(padding(Text("Tap")).background(Color.blue), on_tap)
+
+# 长按（按住 0.6s 触发）
+on_long_press_gesture(Text("Hold"), on_hold, minimum_duration=0.6)
+
+# 拖拽（回调收到起点与当前点）
+def moved(start, current):
+    print(f"dx={current.x - start.x}")
+
+on_drag_gesture(Text("Drag"), moved)
+```
+
+- Tk 后端：绑定原生 `<Button-1>` / `<B1-Motion>` 事件
+- curses 后端：`t` 键循环选中 tappable 区域，Enter 激活
+- 详见 [ADR-0007](adr/0007-gestures.md)
+
 ## 自定义组件
 
 继承 `View` 并实现 `size_that_fits` / `place`（或用容器组合）：

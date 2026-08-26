@@ -35,7 +35,8 @@ from ..core.components import (
 )
 from ..core.geometry import Color, Font, Point, Size
 from ..core.layout import HStack, Spacer, VStack, ZStack
-from ..core.modifiers import AnimationModifier
+from ..core.modifiers import AnimationModifier, TapGestureModifier
+from ..core.gestures import DragGestureModifier, LongPressGestureModifier
 from ..core.view import View, _Frame, _ModifiedContent
 
 
@@ -90,6 +91,8 @@ class TkBackend:
         self._animations: Dict[str, Animation] = {}
         #: path -> active frame animation job (after id), for cancellation
         self._animation_jobs: Dict[str, str] = {}
+        #: path -> list of gesture modifiers collected during a draw pass
+        self._gestures: Dict[str, list] = {}
 
     # -- Public API ---------------------------------------------------------
     def render(self, view: View) -> None:
@@ -97,6 +100,7 @@ class TkBackend:
         previously rendered tree (see ADR-0004)."""
         new_paths: Set[str] = set()
         self._animations = {}
+        self._gestures = {}
         self._draw(view, self.root, "root", new_paths)
 
         # Destroy widgets whose path disappeared from the new tree.
@@ -118,8 +122,12 @@ class TkBackend:
         new_paths: Set[str],
     ) -> None:
         if isinstance(view, _ModifiedContent):
+            # Collect gesture modifiers attached along this path so the widget
+            # created for the wrapped content can bind the native events.
             if isinstance(view._modifier, AnimationModifier):
                 self._animations[path] = view._modifier.animation
+            if isinstance(view._modifier, (LongPressGestureModifier, DragGestureModifier, TapGestureModifier)):
+                self._gestures.setdefault(path, []).append(view._modifier)
             self._draw(view.body(), parent, path, new_paths)
             return
         if isinstance(view, _Frame):
@@ -208,11 +216,86 @@ class TkBackend:
         self._widgets[path] = (widget_type, widget)
         return widget
 
+    # -- Gesture binding (T20) -------------------------------------------
+    def _bind_gestures(self, widget, path: str) -> None:
+        """Bind native Tk events for any gesture modifiers collected at ``path``.
+
+        Supported gestures:
+          - tap (onTapGesture):        <Button-1>
+          - long press:                press-hold-release with a timer
+          - drag:                      press-move-release, callbacks get points
+        """
+        gestures = self._gestures.get(path, [])
+        if not gestures:
+            return
+        for mod in gestures:
+            if isinstance(mod, TapGestureModifier):
+                widget.bind("<Button-1>", lambda e, m=mod: m.action(), add="+")
+            elif isinstance(mod, LongPressGestureModifier):
+                self._bind_long_press(widget, mod)
+            elif isinstance(mod, DragGestureModifier):
+                self._bind_drag(widget, mod)
+
+    def _bind_long_press(self, widget, mod: LongPressGestureModifier) -> None:
+        import time as _time
+
+        state = {"after_id": None, "pressed": False}
+
+        def on_press(event):
+            state["pressed"] = True
+
+            def fire():
+                if state["pressed"]:
+                    mod.action()
+
+            state["after_id"] = widget.after(
+                int(mod.gesture.minimum_duration * 1000), fire
+            )
+
+        def on_release(event):
+            state["pressed"] = False
+            if state["after_id"] is not None:
+                try:
+                    widget.after_cancel(state["after_id"])
+                except Exception:
+                    pass
+                state["after_id"] = None
+
+        widget.bind("<ButtonPress-1>", on_press)
+        widget.bind("<ButtonRelease-1>", on_release)
+
+    def _bind_drag(self, widget, mod: DragGestureModifier) -> None:
+        state = {"active": False, "start": None, "moved": False}
+
+        def on_press(event):
+            state["active"] = True
+            state["start"] = (event.x, event.y)
+            state["moved"] = False
+
+        def on_motion(event):
+            if not state["active"]:
+                return
+            start = state["start"]
+            dx = event.x - start[0]
+            dy = event.y - start[1]
+            if not state["moved"] and (dx * dx + dy * dy) < (mod.gesture.minimum_distance ** 2):
+                return
+            state["moved"] = True
+            mod.action(Point(start[0], start[1]), Point(event.x, event.y))
+
+        def on_release(event):
+            state["active"] = False
+
+        widget.bind("<ButtonPress-1>", on_press, add="+")
+        widget.bind("<B1-Motion>", on_motion, add="+")
+        widget.bind("<ButtonRelease-1>", on_release, add="+")
+
     def _make_text(self, view: Text, parent: tk.Widget, path: str) -> None:
         color = view._color.to_tk() if view._color else "black"
         font = (view._font.family, int(view._font.size))
         label = self._reuse_or_create(path, tk.Label, lambda: tk.Label(parent))
         label.pack(anchor="w")
+        self._bind_gestures(label, path)
 
         anim = self._animations.get(path)
         entry = self._widgets.get(path)
@@ -269,6 +352,7 @@ class TkBackend:
         btn = self._reuse_or_create(path, ttk.Button, lambda: ttk.Button(parent))
         btn.config(text=view.title, command=view.action)
         btn.pack(anchor="w", pady=2)
+        self._bind_gestures(btn, path)
 
     def _make_textfield(self, view: TextField, parent: tk.Widget, path: str) -> None:
         entry = self._reuse_or_create(path, ttk.Entry, lambda: ttk.Entry(parent))
@@ -294,6 +378,7 @@ class TkBackend:
         cb = self._reuse_or_create(path, ttk.Checkbutton, lambda: ttk.Checkbutton(parent))
         cb.config(text=view.title)
         cb.pack(anchor="w", pady=2)
+        self._bind_gestures(cb, path)
         new_val = bool(view.is_on.wrapped_value) if view.is_on else False
         if cb.instate(["selected"]) != new_val:
             if new_val:
@@ -348,6 +433,7 @@ class TkBackend:
         label = self._reuse_or_create(path, tk.Label, lambda: tk.Label(parent))
         label.config(text="\u25a0", fg=color)
         label.pack()
+        self._bind_gestures(label, path)
 
     def _make_datepicker(self, view: DatePicker, parent: tk.Widget, path: str) -> None:
         row = self._reuse_or_create(path, ttk.Frame, lambda: ttk.Frame(parent))

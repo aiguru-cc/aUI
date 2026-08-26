@@ -32,6 +32,7 @@ from ..core.components import (
 )
 from ..core.geometry import Color, EdgeInsets, Font, Point, Size
 from ..core.layout import HStack, Spacer, VStack, ZStack
+from ..core.modifiers import TapGestureModifier
 from ..core.view import View, _Frame, _ModifiedContent
 
 
@@ -78,9 +79,10 @@ class CursesBackend:
         self._view: Optional[View] = None
         self._frames: Dict[int, Tuple[Point, Size]] = {}
         self._buttons: TList[Tuple[Button, Point, Size]] = []
-        self._taps: TList[Tuple[View, Point, Size]] = []
+        self._taps: TList[Tuple[View, Point, Size, Optional[Callable]]] = []
         self._focused: Optional[TextField] = None
         self._focus_index = 0
+        self._tap_index = 0
         self._textfields: TList[TextField] = []
         self._status = ""
 
@@ -135,10 +137,17 @@ class CursesBackend:
             elif isinstance(view, TextField):
                 self._textfields.append(view)
             elif isinstance(view, Toggle):
-                self._taps.append((view, origin, size))
+                self._taps.append((view, origin, size, None))
             return
 
         if isinstance(view, _ModifiedContent):
+            if isinstance(view._modifier, TapGestureModifier):
+                # Record a tappable region for the wrapped content.
+                inner = view.body()
+                if isinstance(inner, (Button, TextField, Toggle, Slider, Picker,
+                                      Divider, Image, Text, Stepper, ProgressView, DatePicker)):
+                    self._frames[id(inner)] = (origin, size)
+                    self._taps.append((inner, origin, size, view._modifier.action))
             self._walk(view.body(), origin, size)
             return
         if isinstance(view, _Frame):
@@ -329,7 +338,11 @@ class CursesBackend:
         elif key in (curses.KEY_DOWN, ord("j")):
             self._move_focus(1)
         elif key in (curses.KEY_ENTER, 10, 13):
+            if self._activate_tap():
+                return
             self._activate_focused()
+        elif key in (ord("t"), ord("T")):
+            self._move_tap(1)
         elif key == ord("\t"):
             self._move_focus(1)
         elif key in (curses.KEY_BACKSPACE, 127, 8):
@@ -350,6 +363,31 @@ class CursesBackend:
         self._focus_index = (self._focus_index + delta) % n
         self._focused = self._textfields[self._focus_index]
         self._status = f" editing: {self._focused.placeholder or 'field'} (q: quit)"
+
+    def _move_tap(self, delta: int) -> None:
+        if not self._taps:
+            return
+        n = len(self._taps)
+        self._tap_index = (self._tap_index + delta) % n
+        view, origin, size, action = self._taps[self._tap_index]
+        self._status = f" tap: {type(view).__name__} (Enter to activate, q: quit)"
+
+    def _activate_tap(self) -> bool:
+        """Activate the currently selected tappable region. Returns True if a
+        tap was fired (so the caller can skip other activation logic)."""
+        if not self._taps:
+            return False
+        view, origin, size, action = self._taps[self._tap_index]
+        if action is not None:
+            action()
+            self._status = f" tapped: {type(view).__name__}"
+            return True
+        # Fall back to the view's own activation (e.g. Toggle flips).
+        if isinstance(view, Toggle) and view.is_on is not None:
+            view.is_on.wrapped_value = not view.is_on.wrapped_value
+            self._status = f" toggled: {view.title}"
+            return True
+        return False
 
     def _activate_focused(self) -> None:
         if self._focused is None:

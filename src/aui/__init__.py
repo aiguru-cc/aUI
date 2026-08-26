@@ -1,6 +1,12 @@
 """aUI — a Python UI library that replicates the SwiftUI syntax and features."""
 
 from .core.animation import Animation, animate, current_animation, with_animation
+from .core.gestures import (
+    DragGesture,
+    LongPressGesture,
+    on_drag_gesture,
+    on_long_press_gesture,
+)
 from .core.geometry import Color, EdgeInsets, Font, Point, Size
 from .core.state import Binding, Environment, ObservableObject, State, observable
 from .core.view import View, ViewModifier
@@ -41,6 +47,8 @@ __version__ = "0.1.0"
 __all__ = [
     # animation
     "Animation", "animate", "current_animation", "with_animation",
+    # gestures
+    "DragGesture", "LongPressGesture", "on_drag_gesture", "on_long_press_gesture",
     # geometry
     "Color", "EdgeInsets", "Font", "Point", "Size",
     # state
