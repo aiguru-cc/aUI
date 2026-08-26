@@ -1,0 +1,20 @@
+# 文档库
+
+aUI 项目文档索引。
+
+## 架构决策记录（ADR）
+
+| 编号 | 标题 | 状态 |
+|---|---|---|
+| [0001](adr/0001-architecture.md) | 架构与设计原则 | 已接受 |
+| [0002](adr/0002-package-structure.md) | 包结构与模块划分 | 已接受 |
+| [0003](adr/0003-render-strategy.md) | 状态驱动渲染策略 | 已接受 |
+
+## 文档
+
+| 文档 | 说明 |
+|---|---|
+| [architecture.md](architecture.md) | 系统架构与核心机制 |
+| [components.md](components.md) | 组件与修饰符参考 |
+| [guide.md](guide.md) | 安装、使用、状态管理、布局指南 |
+| [tasks/BASELINE.md](tasks/BASELINE.md) | 基线任务清单 |
