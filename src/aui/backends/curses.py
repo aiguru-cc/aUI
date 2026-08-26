@@ -84,6 +84,7 @@ class CursesBackend:
         self._focus_index = 0
         self._tap_index = 0
         self._textfields: TList[TextField] = []
+        self._lists: TList[List] = []
         self._status = ""
 
     # -- Public API ---------------------------------------------------------
@@ -123,6 +124,7 @@ class CursesBackend:
         self._buttons = []
         self._taps = []
         self._textfields = []
+        self._lists = []
         self._walk(view, Point(0, 0), Size(width, height))
 
     def _walk(self, view: View, origin: Point, size: Size) -> None:
@@ -176,8 +178,10 @@ class CursesBackend:
                 self._walk(child, Point(origin.x, cursor), child_size)
                 cursor += child_size.height + view._spacing
         elif isinstance(view, List):
+            self._lists.append(view)
+            # Lazy: only lay out the visible viewport (ADR-0008).
             cursor = origin.y
-            for row in view.rows:
+            for row in view.visible_rows(size.height, size.width):
                 row_size = Size(size.width, 1.0)
                 self._walk(row, Point(origin.x, cursor), row_size)
                 cursor += row_size.height + view._spacing
@@ -351,10 +355,22 @@ class CursesBackend:
             self._edit_focused(lambda s: s[:-1])
         elif key == curses.KEY_RIGHT:
             pass
+        elif key in (curses.KEY_PPAGE, ord("[")):
+            self._scroll_list(-1)
+        elif key in (curses.KEY_NPAGE, ord("]")):
+            self._scroll_list(1)
         elif 32 <= key < 127:
             self._edit_focused(lambda s, k=key: s + chr(k))
         else:
             return
+
+    def _scroll_list(self, delta: int) -> None:
+        """Scroll the first (or focused) List by ``delta`` rows."""
+        if not self._lists:
+            return
+        lst = self._lists[0]
+        lst.scroll_to(lst.current_offset() + delta)
+        self._status = f" list scroll: offset {lst.current_offset()}"
 
     def _move_focus(self, delta: int) -> None:
         if not self._textfields:

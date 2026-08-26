@@ -306,30 +306,101 @@ class Divider(View):
 
 
 class List(View):
-    """A vertical list of rows (mirrors SwiftUI List)."""
+    """A vertical list of rows (mirrors SwiftUI List).
 
-    def __init__(self, rows: Sequence[View] = (), spacing: float = 2.0):
+    Supports **lazy virtualisation** (ADR-0008): only the rows inside the
+    visible viewport are laid out and rendered. ``scroll_offset`` is the index
+    of the first visible row (optionally bound to a ``State``); ``row_height``
+    fixes the row height so the viewport size can be derived from the container
+    height. When ``row_height`` is None it is measured from the first row.
+    """
+
+    def __init__(
+        self,
+        rows: Sequence[View] = (),
+        spacing: float = 2.0,
+        scroll_offset: Optional[Binding[int]] = None,
+        row_height: Optional[float] = None,
+    ):
         self._rows = list(rows)
         self._spacing = spacing
+        self._scroll_offset = scroll_offset
+        self._row_height = row_height
+        self._internal_offset = 0
         self._children = list(rows)
 
     @property
     def rows(self) -> List[View]:
         return self._rows
 
+    @property
+    def scroll_offset(self) -> Optional[Binding[int]]:
+        return self._scroll_offset
+
+    @property
+    def row_height(self) -> Optional[float]:
+        return self._row_height
+
+    def effective_row_height(self, proposal_width: float) -> float:
+        """The fixed row height used for viewport math (measured if unset)."""
+        if self._row_height is not None and self._row_height > 0:
+            return self._row_height
+        if not self._rows:
+            return 24.0
+        first = self._rows[0].size_that_fits(Size(proposal_width, float("inf")))
+        return first.height if first.height > 0 else 24.0
+
+    def current_offset(self) -> int:
+        """Current first-visible-row index (from binding or internal default)."""
+        if self._scroll_offset is not None:
+            return max(0, int(self._scroll_offset.wrapped_value))
+        return max(0, getattr(self, "_internal_offset", 0))
+
+    def scroll_to(self, offset: int) -> None:
+        """Set the scroll offset (writes through to the binding if present)."""
+        n = max(0, min(offset, max(0, len(self._rows) - 1)))
+        if self._scroll_offset is not None:
+            self._scroll_offset.wrapped_value = n
+        else:
+            # Without a binding we keep the offset on the List itself.
+            self._internal_offset = n
+
+    def visible_rows(self, viewport_height: float, proposal_width: float) -> List[View]:
+        """The rows inside the visible viewport (lazy window).
+
+        ``viewport_height`` is the height available to the list; only the rows
+        that intersect it are returned. This is what backends render.
+        """
+        if not self._rows or viewport_height <= 0:
+            return []
+        row_h = self.effective_row_height(proposal_width)
+        step = row_h + self._spacing
+        offset = self.current_offset()
+        count = max(1, int(viewport_height // step) + 1)
+        end = min(len(self._rows), offset + count)
+        return self._rows[offset:end]
+
     def size_that_fits(self, proposal: Size) -> Size:
-        height = 0.0
         width = 0.0
         for row in self._rows:
             s = row.size_that_fits(Size(proposal.width, float("inf")))
-            height += s.height
             width = max(width, s.width)
-        height += self._spacing * max(0, len(self._rows) - 1)
+        # Height reflects the full content height (for scroll extent), but the
+        # viewport window is derived from the container height by backends.
+        if self._row_height is not None:
+            height = self._row_height * len(self._rows) + self._spacing * max(0, len(self._rows) - 1)
+        else:
+            height = 0.0
+            for row in self._rows:
+                s = row.size_that_fits(Size(proposal.width, float("inf")))
+                height += s.height
+            height += self._spacing * max(0, len(self._rows) - 1)
         return Size(width, height)
 
     def place(self, origin: Point, size: Size) -> None:
+        # Only lay out the visible window (lazy).
         cursor = origin.y
-        for row in self._rows:
+        for row in self.visible_rows(size.height, size.width):
             row_size = row.size_that_fits(Size(size.width, float("inf")))
             row.place(Point(origin.x, cursor), row_size)
             cursor += row_size.height + self._spacing

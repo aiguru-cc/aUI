@@ -75,6 +75,9 @@ class FakeWidget:
     def winfo_children(self):
         return self.children
 
+    def winfo_height(self):
+        return 200
+
     def start(self, *args):
         return None
 
@@ -110,13 +113,14 @@ def _install_mock_tkinter():
     tk_mod.Widget = FakeWidget
     tk_mod.Label = _make_widget_class("Label")
     tk_mod.Frame = _make_widget_class("Frame")
+    tk_mod.Canvas = _make_widget_class("Canvas")
     tk_mod.StringVar = types.SimpleNamespace
     tk_mod.BooleanVar = types.SimpleNamespace
     tk_mod.DoubleVar = types.SimpleNamespace
 
     ttk_mod = types.ModuleType("tkinter.ttk")
     for name in ("Button", "Checkbutton", "Combobox", "Entry", "Frame", "Label",
-                 "LabelFrame", "Progressbar", "Scale", "Separator"):
+                 "LabelFrame", "Progressbar", "Scale", "Scrollbar", "Separator"):
         setattr(ttk_mod, name, _make_widget_class(name))
 
     sys.modules["tkinter"] = tk_mod

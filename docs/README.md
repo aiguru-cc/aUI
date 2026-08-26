@@ -12,6 +12,7 @@ aUI 项目文档索引。
 | [0005](adr/0005-incremental-rendering.md) | 视图身份与增量渲染 | 已接受 |
 | [0006](adr/0006-animation.md) | 动画与过渡 | 已接受 |
 | [0007](adr/0007-gestures.md) | 手势系统 | 已接受 |
+| [0008](adr/0008-list-virtualization.md) | List 懒加载与滚动 | 已接受 |
 | [0004](adr/0004-curses-backend.md) | 后端选型 — curses 终端后端 | 已接受 |
 | [0005](adr/0005-incremental-rendering.md) | 视图身份与增量渲染（T17） | 已接受 |
 | [0006](adr/0006-animation.md) | 动画与过渡（T19） | 已接受 |

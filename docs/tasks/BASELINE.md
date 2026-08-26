@@ -36,7 +36,7 @@
 - [x] T18 精确文本测量与换行（多行/单词换行/CJK 双宽/line_limit/line_spacing）
 - [x] T19 动画与过渡
 - [x] T20 手势系统（tap/long-press/drag，ADR-0007）
-- [ ] T21 `List` 懒加载与滚动
+- [x] T21 `List` 懒加载与滚动
 - [ ] T22 更多后端（Qt / 终端）
 - [x] T23 更多 SwiftUI 组件（`Stepper`✅、`DatePicker`✅、`ProgressView`✅、`Form`✅、`NavigationStack`✅）
 - [ ] T24 主题与动态类型支持

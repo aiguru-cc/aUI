@@ -93,11 +93,14 @@ class TkBackend:
         self._animation_jobs: Dict[str, str] = {}
         #: path -> list of gesture modifiers collected during a draw pass
         self._gestures: Dict[str, list] = {}
+        #: the most recently rendered view tree (for scroll re-renders)
+        self._current_view: Optional[View] = None
 
     # -- Public API ---------------------------------------------------------
     def render(self, view: View) -> None:
         """(Re)render a view tree into the root window, diffing against the
         previously rendered tree (see ADR-0004)."""
+        self._current_view = view
         new_paths: Set[str] = set()
         self._animations = {}
         self._gestures = {}
@@ -553,5 +556,81 @@ class TkBackend:
         frame.pack(expand=True, fill="both")
 
     def _make_list(self, view: List, parent: tk.Widget, path: str, new_paths: Set[str]) -> None:
-        for i, row in enumerate(view.rows):
-            self._draw(row, parent, f"{path}/{i}", new_paths)
+        """Render a List into a scrollable container (ADR-0008).
+
+        Only the rows in the visible viewport are created (lazy). A vertical
+        scrollbar / mouse-wheel updates ``scroll_offset`` and triggers a
+        re-render; the diff engine then reuses widgets whose row index path
+        is unchanged and creates/destroys rows that entered/left the window.
+        """
+        # Scroll container: frame with canvas + scrollbar.
+        container = self._reuse_or_create(
+            path, ttk.Frame, lambda: ttk.Frame(parent)
+        )
+        container.pack(fill="both", expand=True, padx=4, pady=4)
+
+        canvas = self._reuse_or_create(
+            f"{path}/canvas", tk.Canvas, lambda: tk.Canvas(container)
+        )
+        scrollbar = self._reuse_or_create(
+            f"{path}/scrollbar", ttk.Scrollbar, lambda: ttk.Scrollbar(container, orient="vertical")
+        )
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Viewport height from the canvas widget (fall back to a default).
+        try:
+            vh = float(canvas.winfo_height()) if canvas.winfo_height() > 1 else 200.0
+        except Exception:
+            vh = 200.0
+        row_h = view.effective_row_height(200.0)
+        step = row_h + view._spacing
+        total = len(view.rows)
+        max_offset = max(0, total - 1)
+
+        visible = view.visible_rows(vh, 200.0)
+        # Draw only visible rows, using their absolute row index as the path
+        # suffix so diff reuse is stable across scroll.
+        for row in visible:
+            idx = view.rows.index(row)
+            self._draw(row, canvas, f"{path}/row/{idx}", new_paths)
+
+        # Scrollbar extent + commands.
+        def _set_scroll(first, last):
+            try:
+                scrollbar.set(first, last)
+            except Exception:
+                pass
+
+        def _on_scroll(*args):
+            # args = (moveto, fraction) or (scroll, n, unit/page)
+            if args and args[0] == "moveto":
+                frac = float(args[1])
+                offset = int(round(frac * max_offset))
+            else:
+                unit = args[1] if len(args) > 1 else 1
+                direction = 1 if args[2] == "down" else -1 if len(args) > 2 and args[2] == "up" else 1
+                offset = view.current_offset() + int(unit) * direction
+            view.scroll_to(offset)
+            self._rerender()
+
+        canvas.configure(yscrollcommand=_set_scroll)
+        scrollbar.configure(command=_on_scroll)
+        canvas.bind("<MouseWheel>", lambda e: self._on_wheel(view, e))
+
+        # Canvas scrollregion reflects the full content height.
+        try:
+            canvas.configure(scrollregion=(0, 0, 200, total * step))
+        except Exception:
+            pass
+
+    def _on_wheel(self, view: List, event) -> None:
+        """Mouse-wheel scroll: move the viewport by a few rows and re-render."""
+        delta = -1 if event.delta > 0 else 1
+        view.scroll_to(view.current_offset() + delta)
+        self._rerender()
+
+    def _rerender(self) -> None:
+        """Re-render the current tree (used by scroll handlers)."""
+        if self._current_view is not None:
+            self.render(self._current_view)
