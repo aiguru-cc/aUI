@@ -11,6 +11,7 @@ aUI 项目文档索引。
 | [0003](adr/0003-render-strategy.md) | 状态驱动渲染策略 | 已接受 |
 | [0004](adr/0004-curses-backend.md) | 后端选型 — curses 终端后端 | 已接受 |
 | [0005](adr/0005-incremental-rendering.md) | 视图身份与增量渲染（T17） | 已接受 |
+| [0006](adr/0006-animation.md) | 动画与过渡（T19） | 已接受 |
 
 ## 文档
 

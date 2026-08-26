@@ -83,7 +83,9 @@ class _ModifiedContent(View):
         self._children = [content]
 
     def body(self) -> View:
-        return self._content._content()
+        # Use the base View._content explicitly: subclasses (e.g. Text) store
+        # their payload in a ``_content`` attribute that shadows the method.
+        return View._content(self._content)
 
     def size_that_fits(self, proposal: Size) -> Size:
         return self._modifier.size_that_fits(self._content, proposal)

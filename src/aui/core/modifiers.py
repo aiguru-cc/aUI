@@ -2,12 +2,14 @@
 
 Mirrors SwiftUI's modifier chain: ``padding``, ``background``, ``foregroundColor``,
 ``font``, ``border``, ``cornerRadius``, ``opacity``, ``hidden``, ``frame`` and
-``onTapGesture``. Modifiers are value objects; the render backend interprets them.
+``onTapGesture`` and ``animation``. Modifiers are value objects; the render
+backend interprets them.
 """
 from __future__ import annotations
 
 from typing import Callable, Optional
 
+from .animation import Animation
 from .geometry import Color, EdgeInsets, Font, Point, Size
 from .view import View, ViewModifier, _apply
 
@@ -115,6 +117,25 @@ class TapGestureModifier(ViewModifier):
         content.place(origin, size)
 
 
+
+class AnimationModifier(ViewModifier):
+    """Marks a view so that state changes animate it (see ADR-0006).
+
+    The render backend (Tk) reads this modifier and, when the wrapped view's
+    properties change inside a ``with_animation`` scope, interpolates the
+    old value to the new one over the animation duration.
+    """
+
+    def __init__(self, animation: Animation):
+        self.animation = animation
+
+    def size_that_fits(self, content: View, proposal: Size) -> Size:
+        return content.size_that_fits(proposal)
+
+    def place(self, content: View, origin: Point, size: Size) -> None:
+        content.place(origin, size)
+
+
 # Public modifier API ---------------------------------------------------------
 
 def padding(view: View, edges: Optional[EdgeInsets] = None, length: float = 8.0) -> View:
@@ -162,3 +183,17 @@ def frame(
 
 def on_tap_gesture(view: View, action: Callable[[], None]) -> View:
     return _apply(view, TapGestureModifier(action))
+
+
+def animation(view: View, animation: Animation) -> View:
+    """Attach an ``Animation`` so state changes on this view are animated.
+
+    Usage::
+
+        from aui import Text, animation, with_animation, Animation
+
+        view = Text("hello").animation(Animation.ease_in_out(0.3))
+        with with_animation(Animation.ease_in_out(0.3)):
+            state.wrapped_value = new_value
+    """
+    return _apply(view, AnimationModifier(animation))

@@ -187,6 +187,25 @@ from aui import Text, Color, padding, background, corner_radius
 Text("提示").padding(length=8).background(Color.blue).cornerRadius(6)
 ```
 
+## 动画（T19）
+
+```python
+from aui import Animation, Text, animation, with_animation
+
+# 1. 标记要动画化的视图
+view = animation(Text("Hello", color=Color.blue), Animation.ease_in_out(0.4))
+
+# 2. 在动画作用域内修改状态
+with with_animation(Animation.ease_in_out(0.4)):
+    state.wrapped_value = new_value
+```
+
+- `Animation.linear(d)` / `ease_in(d)` / `ease_out(d)` / `ease_in_out(d)` / `spring(d, damping)`
+- `with_animation(anim)`：上下文管理器，包裹状态变更
+- `animate(anim, fn)`：函数式等价
+- 仅 Tk 后端支持帧驱动动画（颜色过渡）；ASCII/curses 忽略 `.animation()`
+- 详见 [ADR-0006](adr/0006-animation.md)
+
 ## 自定义组件
 
 继承 `View` 并实现 `size_that_fits` / `place`（或用容器组合）：

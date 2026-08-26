@@ -16,6 +16,7 @@ aUI 是一个基于 Python 的声明式 UI 库，复刻 SwiftUI 的语法与功�
 │ 用户代码（View 子类 + State/Binding）         │
 ├─────────────────────────────────────────────┤
 │ aui.core（无 GUI 依赖）                      │
+│  ├─ animation: Animation/with_animation/animate（T19）
 │  ├─ geometry: Size/Point/EdgeInsets/Color/Font
 │  ├─ view:     View 协议 / ViewModifier / frame
 │  ├─ state:    State/Binding/ObservableObject/@observable/Environment
@@ -84,5 +85,6 @@ docs/
 - [ADR-0001 架构与设计原则](adr/0001-architecture.md)
 - [ADR-0002 包结构与模块划分](adr/0002-package-structure.md)
 - [ADR-0003 状态驱动渲染策略](adr/0003-render-strategy.md)
+- [ADR-0006 动画与过渡](adr/0006-animation.md)
 - [ADR-0004 后端选型 — curses 终端后端](adr/0004-curses-backend.md)
 - [ADR-0005 视图身份与增量渲染（T17）](adr/0005-incremental-rendering.md)

@@ -1,5 +1,6 @@
 """aUI — a Python UI library that replicates the SwiftUI syntax and features."""
 
+from .core.animation import Animation, animate, current_animation, with_animation
 from .core.geometry import Color, EdgeInsets, Font, Point, Size
 from .core.state import Binding, Environment, ObservableObject, State, observable
 from .core.view import View, ViewModifier
@@ -22,6 +23,7 @@ from .core.components import (
     Toggle,
 )
 from .core.modifiers import (
+    animation,
     background,
     border,
     corner_radius,
@@ -37,6 +39,8 @@ from .core.modifiers import (
 __version__ = "0.1.0"
 
 __all__ = [
+    # animation
+    "Animation", "animate", "current_animation", "with_animation",
     # geometry
     "Color", "EdgeInsets", "Font", "Point", "Size",
     # state
@@ -49,7 +53,7 @@ __all__ = [
     "Button", "DatePicker", "Divider", "Form", "Group", "Image", "List", "NavigationStack",
     "Picker", "ProgressView", "Slider", "Stepper", "Text", "TextField", "Toggle",
     # modifiers
-    "background", "border", "corner_radius", "font", "foreground_color",
+    "animation", "background", "border", "corner_radius", "font", "foreground_color",
     "frame", "hidden", "on_tap_gesture", "opacity", "padding",
     "__version__",
 ]
