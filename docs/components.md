@@ -13,7 +13,12 @@ from aui import Text, Font, Color
 Text("Hello")                       # 默认 body 字体
 Text("Title").font(Font.title())    # 通过修饰符设置字体
 Text("Red").foregroundColor(Color.red)
+Text("第一行\n第二行")               # 物理换行
+Text("很长的文本会按宽度自动换行", line_limit=3, line_spacing=2)  # 截断 + 行间距
 ```
+
+> 文本测量支持多行布局：`\n` 物理分行、按 proposal 宽度单词换行、
+> CJK 全角字符按双宽测量、`line_limit` 截断、`line_spacing` 行间距。
 
 ### Button
 

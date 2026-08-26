@@ -15,22 +15,97 @@ from .view import View
 
 
 class Text(View):
-    """A single line of static or dynamic text (mirrors SwiftUI Text)."""
+    """Static or dynamic text with multi-line layout (mirrors SwiftUI Text).
 
-    def __init__(self, content: Any = "", font: Optional[Font] = None, color: Optional[Color] = None):
+    Supports explicit line breaks (``\\n``), word-wrapping to a proposal width,
+    ``line_limit`` truncation and ``line_spacing``. Text measurement accounts
+    for CJK full-width characters (double width) vs. ASCII (single width).
+    """
+
+    def __init__(
+        self,
+        content: Any = "",
+        font: Optional[Font] = None,
+        color: Optional[Color] = None,
+        line_limit: Optional[int] = None,
+        line_spacing: float = 0.0,
+    ):
         self._content = str(content)
         self._font = font or Font.body()
         self._color = color
+        self._line_limit = line_limit
+        self._line_spacing = line_spacing
         self._children = []
 
     @property
     def content(self) -> str:
         return self._content
 
+    @property
+    def line_limit(self) -> Optional[int]:
+        return self._line_limit
+
+    @property
+    def line_spacing(self) -> float:
+        return self._line_spacing
+
+    # -- Text measurement ---------------------------------------------------
+    @staticmethod
+    def _char_width(ch: str, font_size: float) -> float:
+        """Approximate glyph width: CJK full-width chars are double width."""
+        if ord(ch) > 0x2E7F:  # CJK / full-width ranges
+            return font_size
+        return font_size * 0.55
+
+    def _measure_line(self, line: str) -> float:
+        return sum(self._char_width(ch, self._font.size) for ch in line)
+
+    def _wrap_line(self, line: str, max_width: float) -> list:
+        """Greedy word wrap of a single logical line into visual lines."""
+        if max_width == float("inf") or max_width <= 0:
+            return [line] if line else [""]
+        words = line.split(" ")
+        if not words:
+            return [""]
+        lines: list = []
+        current = ""
+        current_w = 0.0
+        for word in words:
+            word_w = self._measure_line(word)
+            sep_w = self._char_width(" ", self._font.size)
+            if current and current_w + sep_w + word_w > max_width:
+                lines.append(current)
+                current = word
+                current_w = word_w
+            else:
+                if current:
+                    current += " "
+                    current_w += sep_w
+                current += word
+                current_w += word_w
+        if current:
+            lines.append(current)
+        return lines or [""]
+
+    def _layout_lines(self, proposal_width: float) -> list:
+        """Return the visual lines (wrapped, truncated) for this text."""
+        if not self._content:
+            return []
+        lines: list = []
+        for logical in self._content.split("\n"):
+            lines.extend(self._wrap_line(logical, proposal_width))
+        if self._line_limit is not None and len(lines) > self._line_limit:
+            lines = lines[: self._line_limit]
+        return lines
+
     def size_that_fits(self, proposal: Size) -> Size:
-        # Approximate text measurement: 0.55 * font size per character.
-        width = len(self._content) * self._font.size * 0.55
-        return Size(width, self._font.size * 1.4)
+        lines = self._layout_lines(proposal.width)
+        if not lines:
+            return Size(0.0, 0.0)
+        width = max(self._measure_line(line) for line in lines)
+        line_height = self._font.size * 1.4
+        height = line_height * len(lines) + self._line_spacing * max(0, len(lines) - 1)
+        return Size(width, height)
 
     def place(self, origin: Point, size: Size) -> None:
         return None

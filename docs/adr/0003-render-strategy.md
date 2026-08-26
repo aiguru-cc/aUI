@@ -23,6 +23,7 @@ SwiftUI 的核心是"状态变化 → 视图自动更新"。aUI 需要确定渲�
 - 优点：实现简单、语义清晰、与 SwiftUI 声明式模型一致；状态驱动开箱即用。
 - 代价：每次刷新重建全部控件，控件数量大时性能下降；Tk 控件重建有短暂闪烁。
 - 演进方向：引入视图身份（identity）+ diff 复用控件（类似 SwiftUI 的 diffing）。
+- 已落地：文本测量从近似（0.55×size×len）升级为多行布局（物理换行 + proposal 宽度单词换行 + CJK 双宽字符 + line_limit/line_spacing），见 T18。
 
 ## 备选方案
 
