@@ -7,11 +7,15 @@ from .core.layout import HStack, Spacer, VStack, ZStack
 from .core.components import (
     Button,
     Divider,
+    Form,
     Group,
     Image,
     List,
+    NavigationStack,
     Picker,
+    ProgressView,
     Slider,
+    Stepper,
     Text,
     TextField,
     Toggle,
@@ -41,8 +45,8 @@ __all__ = [
     # layout
     "HStack", "Spacer", "VStack", "ZStack",
     # components
-    "Button", "Divider", "Group", "Image", "List", "Picker", "Slider",
-    "Text", "TextField", "Toggle",
+    "Button", "Divider", "Form", "Group", "Image", "List", "NavigationStack",
+    "Picker", "ProgressView", "Slider", "Stepper", "Text", "TextField", "Toggle",
     # modifiers
     "background", "border", "corner_radius", "font", "foreground_color",
     "frame", "hidden", "on_tap_gesture", "opacity", "padding",

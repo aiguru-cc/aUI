@@ -7,7 +7,20 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from ..core.components import Button, Divider, Image, Picker, Slider, Text, TextField, Toggle
+from ..core.components import (
+    Button,
+    Divider,
+    Form,
+    Image,
+    NavigationStack,
+    Picker,
+    ProgressView,
+    Slider,
+    Stepper,
+    Text,
+    TextField,
+    Toggle,
+)
 from ..core.geometry import Point, Size
 from ..core.layout import HStack, Spacer, VStack, ZStack
 from ..core.view import View, _Frame, _ModifiedContent
@@ -61,6 +74,19 @@ class AsciiBackend:
             self._hline(x, y, min(size.width, self.width - x))
         elif isinstance(view, Image):
             self._put(x, y, "(img)")
+        elif isinstance(view, Stepper):
+            self._put(x, y, "[- " + view.title + " +]")
+        elif isinstance(view, ProgressView):
+            self._draw_progress(view, x, y, size)
+        elif isinstance(view, NavigationStack):
+            self._put(x, y, "== " + view.title + " ==")
+            for child in view.children():
+                self._draw(child, x, y + 1, size)
+        elif isinstance(view, Form):
+            cy = y
+            for child in view.children():
+                self._draw(child, x, cy, size)
+                cy += 1
         elif isinstance(view, Spacer):
             return
         else:
@@ -101,6 +127,15 @@ class AsciiBackend:
     def _box(self, x: int, y: int, label: str) -> None:
         text = " " + label + " "
         self._put(x, y, "[" + text[: max(0, self.width - x - 2)] + "]")
+
+    def _draw_progress(self, view: ProgressView, x: int, y: int, size: Size) -> None:
+        total = max(1, int(min(size.width, self.width - x) - 2))
+        if view.value is None:
+            self._put(x, y, "[" + "?" * total + "]")
+            return
+        ratio = max(0.0, min(1.0, view.value))
+        filled = int(round(ratio * total))
+        self._put(x, y, "[" + "#" * filled + "-" * (total - filled) + "]")
 
     def _snapshot(self) -> str:
         return "\n".join("".join(row).rstrip() for row in self._canvas)

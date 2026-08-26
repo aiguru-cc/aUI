@@ -287,3 +287,160 @@ class Group(View):
 
     def children(self) -> Sequence[View]:
         return self._children
+
+
+class Stepper(View):
+    """A value stepper with +/- buttons (mirrors SwiftUI Stepper).
+
+    ``value`` is an optional two-way binding; when absent the ``on_increment`` /
+    ``on_decrement`` callbacks are used.
+    """
+
+    def __init__(
+        self,
+        title: str = "",
+        value: Optional[Binding[float]] = None,
+        in_range: tuple = (0.0, 100.0),
+        step: float = 1.0,
+        on_increment: Optional[Callable[[], None]] = None,
+        on_decrement: Optional[Callable[[], None]] = None,
+    ):
+        self._title = title
+        self._value = value
+        self._range = in_range
+        self._step = step
+        self._on_increment = on_increment
+        self._on_decrement = on_decrement
+        self._children = []
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def value(self) -> Optional[Binding[float]]:
+        return self._value
+
+    @property
+    def range(self) -> tuple:
+        return self._range
+
+    @property
+    def step(self) -> float:
+        return self._step
+
+    def increment(self) -> None:
+        if self._on_increment is not None:
+            self._on_increment()
+        elif self._value is not None:
+            lo, hi = self._range
+            self._value.wrapped_value = min(hi, self._value.wrapped_value + self._step)
+
+    def decrement(self) -> None:
+        if self._on_decrement is not None:
+            self._on_decrement()
+        elif self._value is not None:
+            lo, hi = self._range
+            self._value.wrapped_value = max(lo, self._value.wrapped_value - self._step)
+
+    def size_that_fits(self, proposal: Size) -> Size:
+        return Size(120.0, 28.0)
+
+    def place(self, origin: Point, size: Size) -> None:
+        return None
+
+    def children(self) -> Sequence[View]:
+        return self._children
+
+
+class ProgressView(View):
+    """A determinate progress bar (mirrors SwiftUI ProgressView).
+
+    ``value`` is a float in ``[0, 1]`` (or a Binding); when None the view is
+    indeterminate (animated spinner in some backends).
+    """
+
+    def __init__(self, value: Optional[float] = None, label: str = ""):
+        self._value = value
+        self._label = label
+        self._children = []
+
+    @property
+    def value(self) -> Optional[float]:
+        return self._value
+
+    @property
+    def label(self) -> str:
+        return self._label
+
+    def size_that_fits(self, proposal: Size) -> Size:
+        return Size(160.0, 20.0)
+
+    def place(self, origin: Point, size: Size) -> None:
+        return None
+
+    def children(self) -> Sequence[View]:
+        return self._children
+
+
+class Form(View):
+    """A grouped vertical container for settings-style forms (mirrors Form).
+
+    Renders children stacked vertically with a subtle section feel.
+    """
+
+    def __init__(self, children: Sequence[View] = (), spacing: float = 4.0):
+        self._children = list(children)
+        self._spacing = spacing
+
+    def size_that_fits(self, proposal: Size) -> Size:
+        width = 0.0
+        height = 0.0
+        for child in self._children:
+            s = child.size_that_fits(Size(proposal.width, float("inf")))
+            width = max(width, s.width)
+            height += s.height
+        height += self._spacing * max(0, len(self._children) - 1)
+        return Size(width, height)
+
+    def place(self, origin: Point, size: Size) -> None:
+        cursor = origin.y
+        for child in self._children:
+            child_size = child.size_that_fits(Size(size.width, float("inf")))
+            child.place(Point(origin.x, cursor), child_size)
+            cursor += child_size.height + self._spacing
+
+    def children(self) -> Sequence[View]:
+        return self._children
+
+
+class NavigationStack(View):
+    """A navigation container with a title bar (mirrors NavigationStack).
+
+    ``title`` is shown in a header bar; ``content`` is the main body.
+    """
+
+    def __init__(self, title: str, content: View):
+        self._title = title
+        self._content = content
+        self._children = [content]
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def content(self) -> View:
+        return self._content
+
+    def size_that_fits(self, proposal: Size) -> Size:
+        inner = self._content.size_that_fits(proposal)
+        header = 24.0
+        return Size(inner.width, inner.height + header)
+
+    def place(self, origin: Point, size: Size) -> None:
+        inner_size = self._content.size_that_fits(size)
+        self._content.place(Point(origin.x, origin.y + 24.0), inner_size)
+
+    def children(self) -> Sequence[View]:
+        return self._children

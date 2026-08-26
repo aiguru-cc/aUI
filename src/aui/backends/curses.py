@@ -14,7 +14,20 @@ from __future__ import annotations
 import curses
 from typing import Callable, Dict, List, Optional, Tuple
 
-from ..core.components import Button, Divider, Image, Picker, Slider, Text, TextField, Toggle
+from ..core.components import (
+    Button,
+    Divider,
+    Form,
+    Image,
+    NavigationStack,
+    Picker,
+    ProgressView,
+    Slider,
+    Stepper,
+    Text,
+    TextField,
+    Toggle,
+)
 from ..core.geometry import Color, EdgeInsets, Font, Point, Size
 from ..core.layout import HStack, Spacer, VStack, ZStack
 from ..core.view import View, _Frame, _ModifiedContent
@@ -110,7 +123,10 @@ class CursesBackend:
 
     def _walk(self, view: View, origin: Point, size: Size) -> None:
         # Record the frame of leaf components.
-        if isinstance(view, (Button, TextField, Toggle, Slider, Picker, Divider, Image, Text)):
+        if isinstance(
+            view,
+            (Button, TextField, Toggle, Slider, Picker, Divider, Image, Text, Stepper, ProgressView),
+        ):
             self._frames[id(view)] = (origin, size)
             if isinstance(view, Button):
                 self._buttons.append((view, origin, size))
@@ -127,6 +143,12 @@ class CursesBackend:
             self._walk(view._content, origin, size)
             return
 
+        if isinstance(view, NavigationStack):
+            # Record a frame so the header can be drawn at the right position.
+            self._frames[id(view)] = (origin, size)
+            self._walk(view.content, Point(origin.x, origin.y + 1), Size(size.width, max(0.0, size.height - 1)))
+            return
+
         if isinstance(view, VStack):
             self._walk_stack(view, origin, size, vertical=True)
         elif isinstance(view, HStack):
@@ -136,6 +158,12 @@ class CursesBackend:
                 self._walk(child, origin, size)
         elif isinstance(view, Spacer):
             return
+        elif isinstance(view, Form):
+            cursor = origin.y
+            for child in view.children():
+                child_size = child.size_that_fits(Size(size.width, float("inf")))
+                self._walk(child, Point(origin.x, cursor), child_size)
+                cursor += child_size.height + view._spacing
         elif isinstance(view, List):
             cursor = origin.y
             for row in view.rows:
@@ -162,7 +190,10 @@ class CursesBackend:
             proposal = Size(**{main_attr: float("inf"), cross_attr: cross})
             child_size = child.size_that_fits(proposal)
             # Terminal adaptation: controls are single-row tall in a terminal.
-            if isinstance(child, (Button, TextField, Toggle, Slider, Picker, Text, Divider, Image)):
+            if isinstance(
+                child,
+                (Button, TextField, Toggle, Slider, Picker, Text, Divider, Image, Stepper, ProgressView),
+            ):
                 if vertical:
                     child_size = Size(child_size.width, 1.0)
             sizes.append(child_size)
@@ -255,6 +286,24 @@ class CursesBackend:
             grid.hline(x, y, fw)
         elif isinstance(view, Image):
             grid.put(x, y, "(img)")
+        elif isinstance(view, Stepper):
+            label = f"[- {view.title} +]"
+            grid.put(x, y, label[: max(0, fw)])
+        elif isinstance(view, ProgressView):
+            total = max(1, fw - 2)
+            if view.value is None:
+                grid.put(x, y, "[" + "?" * total + "]")
+            else:
+                ratio = max(0.0, min(1.0, view.value))
+                filled = int(round(ratio * total))
+                grid.put(x, y, "[" + "#" * filled + "-" * (total - filled) + "]")
+        elif isinstance(view, NavigationStack):
+            grid.put(x, y, "== " + view.title + " ==")
+            for child in view.children():
+                self._draw(child, grid, origin, size)
+        elif isinstance(view, Form):
+            for child in view.children():
+                self._draw(child, grid, origin, size)
         else:
             for child in view.children():
                 self._draw(child, grid, origin, size)

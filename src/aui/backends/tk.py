@@ -10,7 +10,21 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Dict, Optional
 
-from ..core.components import Button, Divider, Image, List, Picker, Slider, Text, TextField, Toggle
+from ..core.components import (
+    Button,
+    Divider,
+    Form,
+    Image,
+    List,
+    NavigationStack,
+    Picker,
+    ProgressView,
+    Slider,
+    Stepper,
+    Text,
+    TextField,
+    Toggle,
+)
 from ..core.geometry import Color, Font, Point, Size
 from ..core.layout import HStack, Spacer, VStack, ZStack
 from ..core.view import View, _Frame, _ModifiedContent
@@ -68,6 +82,17 @@ class TkBackend:
             ttk.Separator(parent, orient="horizontal").pack(fill="x", pady=4)
         elif isinstance(view, Image):
             tk.Label(parent, text="\u25a0", fg=view._color.to_tk() if view._color else "gray").pack()
+        elif isinstance(view, Stepper):
+            self._make_stepper(view, parent)
+        elif isinstance(view, ProgressView):
+            self._make_progress(view, parent)
+        elif isinstance(view, NavigationStack):
+            self._make_navigation(view, parent)
+        elif isinstance(view, Form):
+            frame = ttk.LabelFrame(parent, text="Form")
+            frame.pack(fill="both", expand=True, padx=4, pady=4)
+            for child in view.children():
+                self._draw(child, frame, 0, 0)
         elif isinstance(view, Spacer):
             tk.Frame(parent, height=1).pack(expand=True, fill="both")
         elif isinstance(view, List):
@@ -149,3 +174,28 @@ class TkBackend:
                 view.selection.wrapped_value = var.get()
 
         combo.bind("<<ComboboxSelected>>", on_change)
+
+    def _make_stepper(self, view: Stepper, parent: tk.Widget) -> None:
+        row = ttk.Frame(parent)
+        row.pack(fill="x", pady=2)
+        ttk.Label(row, text=view.title).pack(side="left")
+        ttk.Button(row, text="-", width=2, command=view.decrement).pack(side="right")
+        ttk.Button(row, text="+", width=2, command=view.increment).pack(side="right")
+        if view.value is not None:
+            ttk.Label(row, text=str(view.value.wrapped_value)).pack(side="right", padx=4)
+
+    def _make_progress(self, view: ProgressView, parent: tk.Widget) -> None:
+        if view.label:
+            ttk.Label(parent, text=view.label).pack(anchor="w")
+        if view.value is None:
+            pb = ttk.Progressbar(parent, mode="indeterminate")
+            pb.pack(fill="x", pady=2)
+            pb.start(20)
+        else:
+            pb = ttk.Progressbar(parent, mode="determinate", maximum=1.0, value=view.value)
+            pb.pack(fill="x", pady=2)
+
+    def _make_navigation(self, view: NavigationStack, parent: tk.Widget) -> None:
+        header = tk.Label(parent, text=view.title, font=("TkDefaultFont", 14, "bold"))
+        header.pack(fill="x", pady=4)
+        self._draw(view.content, parent, 0, 0)

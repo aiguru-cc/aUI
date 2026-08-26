@@ -38,7 +38,7 @@
 - [ ] T20 手势系统（拖拽、长按）
 - [ ] T21 `List` 懒加载与滚动
 - [ ] T22 更多后端（Qt / 终端）
-- [ ] T23 更多 SwiftUI 组件（`Stepper`、`DatePicker`、`ProgressView`、`Form`、`NavigationStack`）
+- [ ] T23 更多 SwiftUI 组件（`Stepper`✅、`ProgressView`✅、`Form`✅、`NavigationStack`✅、`DatePicker` 待办）
 - [ ] T24 主题与动态类型支持
 - [ ] T25 可访问性（accessibility）支持
 

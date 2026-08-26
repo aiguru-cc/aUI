@@ -101,6 +101,46 @@ from aui import List, Text
 List([Text("行1"), Text("行2")])
 ```
 
+### Stepper（步进器）
+
+```python
+from aui import Stepper, State
+
+qty = State(3.0)
+Stepper("数量", value=qty.binding(), in_range=(0.0, 10.0), step=1.0)
+# 或使用回调
+Stepper("数量", on_increment=on_inc, on_decrement=on_dec)
+```
+
+### ProgressView（进度条）
+
+```python
+from aui import ProgressView
+
+ProgressView(value=0.5, label="加载中")   # 确定进度
+ProgressView()                            # 不确定进度（动画）
+```
+
+### Form（表单容器）
+
+```python
+from aui import Form, TextField, Toggle, Button
+
+Form([
+    TextField(name.binding(), placeholder="姓名"),
+    Toggle("启用"),
+    Button("保存", action=save),
+])
+```
+
+### NavigationStack（导航容器）
+
+```python
+from aui import NavigationStack, Text
+
+NavigationStack("设置", Text("内容"))
+```
+
 ### Group
 
 不引入布局的分组容器，便于批量应用修饰符。
