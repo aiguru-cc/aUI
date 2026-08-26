@@ -52,8 +52,11 @@ aUI 是一个基于 Python 的声明式 UI 库，复刻 SwiftUI 的语法与功�
 
 ### 4. 渲染策略
 
-整树重建（full re-render）：状态变更 → 后端重建视图树 → 重建控件。
-详见 [ADR-0003](adr/0003-render-strategy.md)。
+**增量渲染（diff）**：每个视图树节点有结构性身份（路径，如 `root/0/1`）。
+状态变更重建视图树后，后端复用路径相同、类型兼容的控件，仅更新变化属性；
+类型不兼容或已移除的路径则重建/销毁。避免闪烁并保持输入焦点与滚动位置。
+详见 [ADR-0003](adr/0003-render-strategy.md) 与
+[ADR-0005](adr/0005-incremental-rendering.md)。
 
 ### 5. 后端选型
 
@@ -82,3 +85,4 @@ docs/
 - [ADR-0002 包结构与模块划分](adr/0002-package-structure.md)
 - [ADR-0003 状态驱动渲染策略](adr/0003-render-strategy.md)
 - [ADR-0004 后端选型 — curses 终端后端](adr/0004-curses-backend.md)
+- [ADR-0005 视图身份与增量渲染（T17）](adr/0005-incremental-rendering.md)

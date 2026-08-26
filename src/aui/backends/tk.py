@@ -1,14 +1,20 @@
-"""Tkinter backend for aUI.
+"""Tkinter backend for aUI with incremental (diff) rendering.
 
 Renders the declarative aUI view tree onto native Tk widgets. Tkinter ships
 with CPython on macOS/Windows/Linux, so this keeps aUI dependency-free while
 still providing a real, interactive GUI backend.
+
+Rendering strategy (see ADR-0004): each view-tree node gets a structural
+identity (a path like ``root/0/1``). On re-render, widgets whose path already
+exists and whose *view type* is compatible are **reused** and only their
+properties are updated; incompatible or removed paths are rebuilt/destroyed.
+This avoids flicker and keeps focus/scroll position across state changes.
 """
 from __future__ import annotations
 
 import tkinter as tk
 from tkinter import ttk
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional, Set, Tuple, Type
 
 from ..core.components import (
     Button,
@@ -31,79 +37,101 @@ from ..core.view import View, _Frame, _ModifiedContent
 
 
 class TkBackend:
-    """Renders aUI views into a Tk window. Not thread-safe; run on main thread."""
+    """Renders aUI views into a Tk window with incremental updates.
+
+    Not thread-safe; run on main thread. ``render`` may be called repeatedly
+    (e.g. from a state-change callback) and will diff against the previous tree.
+    """
 
     def __init__(self, root: Optional[tk.Tk] = None):
         self.root = root or tk.Tk()
         self.root.title("aUI")
-        self._widgets: Dict[int, tk.Widget] = {}
-        self._next_id = 0
+        #: path -> (view type, widget) for the current rendered tree
+        self._widgets: Dict[str, Tuple[type, object]] = {}
+        self._paths: Set[str] = set()
 
     # -- Public API ---------------------------------------------------------
     def render(self, view: View) -> None:
-        """(Re)render a view tree into the root window."""
-        for widget in self.root.winfo_children():
-            widget.destroy()
-        self._widgets.clear()
-        self._draw(view, self.root, 0, 0)
+        """(Re)render a view tree into the root window, diffing against the
+        previously rendered tree (see ADR-0004)."""
+        new_paths: Set[str] = set()
+        self._draw(view, self.root, "root", new_paths)
+
+        # Destroy widgets whose path disappeared from the new tree.
+        for path in list(self._paths - new_paths):
+            entry = self._widgets.pop(path, None)
+            if entry is not None:
+                entry[1].destroy()
+        self._paths = new_paths
 
     def mainloop(self) -> None:
         self.root.mainloop()
 
     # -- Drawing ------------------------------------------------------------
-    def _draw(self, view: View, parent: tk.Widget, x: int, y: int) -> None:
+    def _draw(
+        self,
+        view: View,
+        parent: tk.Widget,
+        path: str,
+        new_paths: Set[str],
+    ) -> None:
         if isinstance(view, _ModifiedContent):
-            self._draw(view.body(), parent, x, y)
+            self._draw(view.body(), parent, path, new_paths)
             return
         if isinstance(view, _Frame):
-            self._draw(view._content, parent, x, y)
+            self._draw(view._content, parent, path, new_paths)
             return
 
-        if isinstance(view, VStack):
-            self._draw_stack(view, parent, vertical=True)
-        elif isinstance(view, HStack):
-            self._draw_stack(view, parent, vertical=False)
-        elif isinstance(view, ZStack):
-            for child in view.children():
-                self._draw(child, parent, x, y)
-        elif isinstance(view, Text):
-            self._make_text(view, parent)
-        elif isinstance(view, Button):
-            self._make_button(view, parent)
-        elif isinstance(view, TextField):
-            self._make_textfield(view, parent)
-        elif isinstance(view, Toggle):
-            self._make_toggle(view, parent)
-        elif isinstance(view, Slider):
-            self._make_slider(view, parent)
-        elif isinstance(view, Picker):
-            self._make_picker(view, parent)
-        elif isinstance(view, Divider):
-            ttk.Separator(parent, orient="horizontal").pack(fill="x", pady=4)
-        elif isinstance(view, Image):
-            tk.Label(parent, text="\u25a0", fg=view._color.to_tk() if view._color else "gray").pack()
-        elif isinstance(view, Stepper):
-            self._make_stepper(view, parent)
-        elif isinstance(view, ProgressView):
-            self._make_progress(view, parent)
-        elif isinstance(view, NavigationStack):
-            self._make_navigation(view, parent)
-        elif isinstance(view, Form):
-            frame = ttk.LabelFrame(parent, text="Form")
-            frame.pack(fill="both", expand=True, padx=4, pady=4)
-            for child in view.children():
-                self._draw(child, frame, 0, 0)
-        elif isinstance(view, Spacer):
-            tk.Frame(parent, height=1).pack(expand=True, fill="both")
-        elif isinstance(view, List):
-            for row in view.rows:
-                self._draw(row, parent, 0, 0)
-        else:
-            for child in view.children():
-                self._draw(child, parent, x, y)
+        new_paths.add(path)
 
-    def _draw_stack(self, stack, parent: tk.Widget, vertical: bool) -> None:
-        frame = ttk.Frame(parent)
+        if isinstance(view, VStack):
+            self._draw_stack(view, parent, path, new_paths, vertical=True)
+        elif isinstance(view, HStack):
+            self._draw_stack(view, parent, path, new_paths, vertical=False)
+        elif isinstance(view, ZStack):
+            for i, child in enumerate(view.children()):
+                self._draw(child, parent, f"{path}/{i}", new_paths)
+        elif isinstance(view, Text):
+            self._make_text(view, parent, path)
+        elif isinstance(view, Button):
+            self._make_button(view, parent, path)
+        elif isinstance(view, TextField):
+            self._make_textfield(view, parent, path)
+        elif isinstance(view, Toggle):
+            self._make_toggle(view, parent, path)
+        elif isinstance(view, Slider):
+            self._make_slider(view, parent, path)
+        elif isinstance(view, Picker):
+            self._make_picker(view, parent, path)
+        elif isinstance(view, Divider):
+            self._make_divider(view, parent, path)
+        elif isinstance(view, Image):
+            self._make_image(view, parent, path)
+        elif isinstance(view, Stepper):
+            self._make_stepper(view, parent, path)
+        elif isinstance(view, ProgressView):
+            self._make_progress(view, parent, path)
+        elif isinstance(view, NavigationStack):
+            self._make_navigation(view, parent, path, new_paths)
+        elif isinstance(view, Form):
+            self._make_form(view, parent, path, new_paths)
+        elif isinstance(view, Spacer):
+            self._make_spacer(view, parent, path)
+        elif isinstance(view, List):
+            self._make_list(view, parent, path, new_paths)
+        else:
+            for i, child in enumerate(view.children()):
+                self._draw(child, parent, f"{path}/{i}", new_paths)
+
+    def _draw_stack(
+        self,
+        stack,
+        parent: tk.Widget,
+        path: str,
+        new_paths: Set[str],
+        vertical: bool,
+    ) -> None:
+        frame = self._reuse_or_create(path, ttk.Frame, lambda: ttk.Frame(parent))
         frame.pack(
             side="top" if vertical else "left",
             fill="both",
@@ -111,91 +139,179 @@ class TkBackend:
             padx=4,
             pady=4,
         )
-        for child in stack.children():
+        for i, child in enumerate(stack.children()):
             if isinstance(child, Spacer):
-                tk.Frame(frame, height=1).pack(expand=True, fill="both")
+                self._make_spacer(child, frame, f"{path}/{i}")
                 continue
-            self._draw(child, frame, 0, 0)
+            self._draw(child, frame, f"{path}/{i}", new_paths)
 
-    # -- Widget factories ---------------------------------------------------
-    def _make_text(self, view: Text, parent: tk.Widget) -> None:
+    # -- Widget factories (with diff reuse) ---------------------------------
+    def _reuse_or_create(self, path: str, widget_type: type, factory: Callable[[], object]) -> object:
+        """Return a widget for ``path``, reusing it if the type is compatible.
+
+        If an existing widget has an incompatible type, destroy it and create a
+        fresh one (the subtree changed shape).
+        """
+        entry = self._widgets.get(path)
+        if entry is not None:
+            existing_type, existing = entry
+            if existing_type is widget_type:
+                return existing
+            existing.destroy()
+        widget = factory()
+        self._widgets[path] = (widget_type, widget)
+        return widget
+
+    def _make_text(self, view: Text, parent: tk.Widget, path: str) -> None:
         color = view._color.to_tk() if view._color else "black"
-        tk.Label(
-            parent,
-            text=view.content,
-            fg=color,
-            font=(view._font.family, int(view._font.size)),
-        ).pack(anchor="w")
+        font = (view._font.family, int(view._font.size))
+        label = self._reuse_or_create(path, tk.Label, lambda: tk.Label(parent))
+        label.config(text=view.content, fg=color, font=font)
+        label.pack(anchor="w")
 
-    def _make_button(self, view: Button, parent: tk.Widget) -> None:
-        btn = ttk.Button(parent, text=view.title, command=view.action)
+    def _make_button(self, view: Button, parent: tk.Widget, path: str) -> None:
+        btn = self._reuse_or_create(path, ttk.Button, lambda: ttk.Button(parent))
+        btn.config(text=view.title, command=view.action)
         btn.pack(anchor="w", pady=2)
 
-    def _make_textfield(self, view: TextField, parent: tk.Widget) -> None:
-        var = tk.StringVar(value=view.text.wrapped_value)
-        entry = ttk.Entry(parent, textvariable=var)
+    def _make_textfield(self, view: TextField, parent: tk.Widget, path: str) -> None:
+        entry = self._reuse_or_create(path, ttk.Entry, lambda: ttk.Entry(parent))
         entry.pack(fill="x", pady=2)
+        current = entry.get()
+        new_value = view.text.wrapped_value
+        if current != new_value:
+            entry.delete(0, "end")
+            entry.insert(0, new_value)
 
         def on_change(*_args):
-            view.text.wrapped_value = var.get()
+            view.text.wrapped_value = entry.get()
 
-        var.trace_add("write", on_change)
+        entry._aui_trace = getattr(entry, "_aui_trace", None)
+        if entry._aui_trace is not None:
+            try:
+                entry.trace_remove("write", entry._aui_trace)
+            except Exception:
+                pass
+        entry._aui_trace = entry.trace_add("write", on_change)
 
-    def _make_toggle(self, view: Toggle, parent: tk.Widget) -> None:
-        var = tk.BooleanVar(value=view.is_on.wrapped_value if view.is_on else False)
-        cb = ttk.Checkbutton(parent, text=view.title, variable=var)
+    def _make_toggle(self, view: Toggle, parent: tk.Widget, path: str) -> None:
+        cb = self._reuse_or_create(path, ttk.Checkbutton, lambda: ttk.Checkbutton(parent))
+        cb.config(text=view.title)
         cb.pack(anchor="w", pady=2)
+        new_val = bool(view.is_on.wrapped_value) if view.is_on else False
+        if cb.instate(["selected"]) != new_val:
+            if new_val:
+                cb.state(["selected"])
+            else:
+                cb.state(["!selected"])
 
         def on_change():
             if view.is_on is not None:
-                view.is_on.wrapped_value = var.get()
+                view.is_on.wrapped_value = bool(cb.instate(["selected"]))
 
-        cb.config(command=on_change)
+        cb.configure(command=on_change)
 
-    def _make_slider(self, view: Slider, parent: tk.Widget) -> None:
+    def _make_slider(self, view: Slider, parent: tk.Widget, path: str) -> None:
         lo, hi = view.range
-        var = tk.DoubleVar(value=view.value.wrapped_value if view.value else lo)
-        slider = ttk.Scale(parent, from_=lo, to=hi, variable=var, command=lambda _v: None)
+        slider = self._reuse_or_create(path, ttk.Scale, lambda: ttk.Scale(parent))
+        slider.configure(from_=lo, to=hi)
         slider.pack(fill="x", pady=2)
+        if view.value is not None:
+            current = slider.get()
+            new_val = view.value.wrapped_value
+            if abs(current - new_val) > 1e-9:
+                slider.set(new_val)
 
         def on_change(*_args):
             if view.value is not None:
-                view.value.wrapped_value = var.get()
+                view.value.wrapped_value = slider.get()
 
-        var.trace_add("write", on_change)
+        slider.configure(command=on_change)
 
-    def _make_picker(self, view: Picker, parent: tk.Widget) -> None:
-        var = tk.StringVar(value=str(view.selection.wrapped_value) if view.selection else "")
-        combo = ttk.Combobox(parent, textvariable=var, values=[str(o) for o in view.options], state="readonly")
+    def _make_picker(self, view: Picker, parent: tk.Widget, path: str) -> None:
+        combo = self._reuse_or_create(path, ttk.Combobox, lambda: ttk.Combobox(parent))
+        combo.configure(values=[str(o) for o in view.options])
         combo.pack(fill="x", pady=2)
+        if view.selection is not None:
+            new_val = str(view.selection.wrapped_value)
+            if combo.get() != new_val:
+                combo.set(new_val)
 
         def on_change(event=None):
             if view.selection is not None:
-                view.selection.wrapped_value = var.get()
+                view.selection.wrapped_value = combo.get()
 
         combo.bind("<<ComboboxSelected>>", on_change)
 
-    def _make_stepper(self, view: Stepper, parent: tk.Widget) -> None:
-        row = ttk.Frame(parent)
+    def _make_divider(self, view: Divider, parent: tk.Widget, path: str) -> None:
+        sep = self._reuse_or_create(path, ttk.Separator, lambda: ttk.Separator(parent))
+        sep.pack(fill="x", pady=4)
+
+    def _make_image(self, view: Image, parent: tk.Widget, path: str) -> None:
+        color = view._color.to_tk() if view._color else "gray"
+        label = self._reuse_or_create(path, tk.Label, lambda: tk.Label(parent))
+        label.config(text="\u25a0", fg=color)
+        label.pack()
+
+    def _make_stepper(self, view: Stepper, parent: tk.Widget, path: str) -> None:
+        row = self._reuse_or_create(path, ttk.Frame, lambda: ttk.Frame(parent))
         row.pack(fill="x", pady=2)
+        # Rebuild children of the stepper row (small fixed set).
+        for w in row.winfo_children():
+            w.destroy()
         ttk.Label(row, text=view.title).pack(side="left")
         ttk.Button(row, text="-", width=2, command=view.decrement).pack(side="right")
         ttk.Button(row, text="+", width=2, command=view.increment).pack(side="right")
         if view.value is not None:
             ttk.Label(row, text=str(view.value.wrapped_value)).pack(side="right", padx=4)
 
-    def _make_progress(self, view: ProgressView, parent: tk.Widget) -> None:
+    def _make_progress(self, view: ProgressView, parent: tk.Widget, path: str) -> None:
         if view.label:
-            ttk.Label(parent, text=view.label).pack(anchor="w")
+            lbl = self._reuse_or_create(
+                f"{path}/label",
+                ttk.Label,
+                lambda: ttk.Label(parent),
+            )
+            lbl.config(text=view.label)
+            lbl.pack(anchor="w")
         if view.value is None:
-            pb = ttk.Progressbar(parent, mode="indeterminate")
+            pb = self._reuse_or_create(
+                path,
+                ttk.Progressbar,
+                lambda: ttk.Progressbar(parent, mode="indeterminate"),
+            )
             pb.pack(fill="x", pady=2)
             pb.start(20)
         else:
-            pb = ttk.Progressbar(parent, mode="determinate", maximum=1.0, value=view.value)
+            pb = self._reuse_or_create(
+                path,
+                ttk.Progressbar,
+                lambda: ttk.Progressbar(parent, mode="determinate", maximum=1.0),
+            )
+            pb.configure(value=view.value)
             pb.pack(fill="x", pady=2)
 
-    def _make_navigation(self, view: NavigationStack, parent: tk.Widget) -> None:
-        header = tk.Label(parent, text=view.title, font=("TkDefaultFont", 14, "bold"))
+    def _make_navigation(self, view: NavigationStack, parent: tk.Widget, path: str, new_paths: Set[str]) -> None:
+        header = self._reuse_or_create(
+            f"{path}/header",
+            tk.Label,
+            lambda: tk.Label(parent),
+        )
+        header.config(text=view.title, font=("TkDefaultFont", 14, "bold"))
         header.pack(fill="x", pady=4)
-        self._draw(view.content, parent, 0, 0)
+        self._draw(view.content, parent, f"{path}/content", new_paths)
+
+    def _make_form(self, view: Form, parent: tk.Widget, path: str, new_paths: Set[str]) -> None:
+        frame = self._reuse_or_create(path, ttk.LabelFrame, lambda: ttk.LabelFrame(parent))
+        frame.config(text="Form")
+        frame.pack(fill="both", expand=True, padx=4, pady=4)
+        for i, child in enumerate(view.children()):
+            self._draw(child, frame, f"{path}/{i}", new_paths)
+
+    def _make_spacer(self, view: Spacer, parent: tk.Widget, path: str) -> None:
+        frame = self._reuse_or_create(path, tk.Frame, lambda: tk.Frame(parent))
+        frame.pack(expand=True, fill="both")
+
+    def _make_list(self, view: List, parent: tk.Widget, path: str, new_paths: Set[str]) -> None:
+        for i, row in enumerate(view.rows):
+            self._draw(row, parent, f"{path}/{i}", new_paths)

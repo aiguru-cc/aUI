@@ -24,6 +24,7 @@ SwiftUI 的核心是"状态变化 → 视图自动更新"。aUI 需要确定渲�
 - 代价：每次刷新重建全部控件，控件数量大时性能下降；Tk 控件重建有短暂闪烁。
 - 演进方向：引入视图身份（identity）+ diff 复用控件（类似 SwiftUI 的 diffing）。
 - 已落地：文本测量从近似（0.55×size×len）升级为多行布局（物理换行 + proposal 宽度单词换行 + CJK 双宽字符 + line_limit/line_spacing），见 T18。
+- 已落地：增量渲染（结构性身份 + diff 复用控件），见 ADR-0005 / T17。整树重建仍作为 ASCII/curses 后端的默认策略，Tk 后端使用增量渲染。
 
 ## 备选方案
 
