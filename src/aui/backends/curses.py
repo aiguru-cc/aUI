@@ -162,30 +162,18 @@ class CursesBackend:
         elif isinstance(view, Form):
             cursor = origin.y
             for child in view.children():
-                child_size = self._measure_child(child, size.width)
+                child_size = Size(size.width, 1.0)
                 self._walk(child, Point(origin.x, cursor), child_size)
                 cursor += child_size.height + view._spacing
         elif isinstance(view, List):
             cursor = origin.y
             for row in view.rows:
-                row_size = self._measure_child(row, size.width)
+                row_size = Size(size.width, 1.0)
                 self._walk(row, Point(origin.x, cursor), row_size)
                 cursor += row_size.height + view._spacing
         else:
             for child in view.children():
                 self._walk(child, origin, size)
-
-    def _measure_child(self, child: View, cross: float) -> Size:
-        """Measure a child for terminal layout.
-
-        Controls and containers are compressed to a single terminal row so
-        that vertical stacks lay out sensibly in a character grid.
-        """
-        if isinstance(child, Spacer):
-            return Size(0.0, 0.0)
-        child_size = child.size_that_fits(Size(cross, float("inf")))
-        # In a terminal every view occupies at least one row.
-        return Size(child_size.width, 1.0)
 
     def _walk_stack(self, stack, origin: Point, size: Size, vertical: bool) -> None:
         children = stack.children()
@@ -200,7 +188,13 @@ class CursesBackend:
             if isinstance(child, Spacer):
                 sizes.append(Size())
                 continue
-            sizes.append(self._measure_child(child, cross))
+            if vertical:
+                # Vertical stack: child fills container width, single row.
+                sizes.append(Size(cross, 1.0))
+            else:
+                # Horizontal stack: child keeps content width, single row.
+                child_size = child.size_that_fits(Size(float("inf"), 1.0))
+                sizes.append(Size(child_size.width, 1.0))
 
         spacers = [i for i, c in enumerate(children) if isinstance(c, Spacer)]
         spacing = stack._spacing * max(0, len(children) - 1)
@@ -209,12 +203,24 @@ class CursesBackend:
         spacer_main = free / len(spacers) if spacers else 0.0
 
         cursor = 0.0
+        # For horizontal stacks, if children overflow the container width,
+        # scale them down proportionally so nothing is clipped.
+        if not vertical:
+            total = sum(getattr(s, main_attr) for s in sizes) + spacing
+            avail = getattr(size, main_attr)
+            if total > avail > 0:
+                ratio = avail / total
+                sizes = [
+                    Size(getattr(s, "width") * ratio, getattr(s, "height")) for s in sizes
+                ]
         for i, child in enumerate(children):
             child_size = sizes[i]
             if i in spacers:
                 child_size = Size(**{main_attr: spacer_main, cross_attr: cross})
             child_main = getattr(child_size, main_attr)
             child_cross = getattr(child_size, cross_attr)
+            # Children fill the container along the cross axis.
+            child_cross = cross
             align = {"leading": 0.0, "top": 0.0, "center": 0.5, "trailing": 1.0, "bottom": 1.0}.get(
                 stack._alignment, 0.5
             )

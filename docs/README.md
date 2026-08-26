@@ -18,4 +18,5 @@ aUI 项目文档索引。
 | [architecture.md](architecture.md) | 系统架构与核心机制 |
 | [components.md](components.md) | 组件与修饰符参考 |
 | [guide.md](guide.md) | 安装、使用、状态管理、布局指南 |
+| [examples.md](examples.md) | 示例索引与运行说明 |
 | [tasks/BASELINE.md](tasks/BASELINE.md) | 基线任务清单 |
