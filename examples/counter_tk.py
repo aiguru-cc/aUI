@@ -2,6 +2,7 @@
 
 Run:  python3 examples/counter_tk.py
 """
+import _bootstrap  # noqa: F401
 from aui.backends.tk import TkBackend
 from aui.core.components import Button, Text
 from aui.core.layout import VStack

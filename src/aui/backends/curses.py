@@ -12,13 +12,14 @@ loop that dispatches to buttons and tap gestures.
 from __future__ import annotations
 
 import curses
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List as TList, Optional, Tuple
 
 from ..core.components import (
     Button,
     Divider,
     Form,
     Image,
+    List,
     NavigationStack,
     Picker,
     ProgressView,
@@ -39,7 +40,7 @@ class TerminalGrid:
     def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
-        self._cells: List[List[str]] = [[" "] * width for _ in range(height)]
+        self._cells: TList[TList[str]] = [[" "] * width for _ in range(height)]
 
     def put(self, x: int, y: int, text: str) -> None:
         """Write text at (x, y), clipping to the canvas."""
@@ -75,11 +76,11 @@ class CursesBackend:
         self._view_factory = view_factory
         self._view: Optional[View] = None
         self._frames: Dict[int, Tuple[Point, Size]] = {}
-        self._buttons: List[Tuple[Button, Point, Size]] = []
-        self._taps: List[Tuple[View, Point, Size]] = []
+        self._buttons: TList[Tuple[Button, Point, Size]] = []
+        self._taps: TList[Tuple[View, Point, Size]] = []
         self._focused: Optional[TextField] = None
         self._focus_index = 0
-        self._textfields: List[TextField] = []
+        self._textfields: TList[TextField] = []
         self._status = ""
 
     # -- Public API ---------------------------------------------------------
@@ -161,18 +162,30 @@ class CursesBackend:
         elif isinstance(view, Form):
             cursor = origin.y
             for child in view.children():
-                child_size = child.size_that_fits(Size(size.width, float("inf")))
+                child_size = self._measure_child(child, size.width)
                 self._walk(child, Point(origin.x, cursor), child_size)
                 cursor += child_size.height + view._spacing
         elif isinstance(view, List):
             cursor = origin.y
             for row in view.rows:
-                row_size = row.size_that_fits(Size(size.width, float("inf")))
+                row_size = self._measure_child(row, size.width)
                 self._walk(row, Point(origin.x, cursor), row_size)
                 cursor += row_size.height + view._spacing
         else:
             for child in view.children():
                 self._walk(child, origin, size)
+
+    def _measure_child(self, child: View, cross: float) -> Size:
+        """Measure a child for terminal layout.
+
+        Controls and containers are compressed to a single terminal row so
+        that vertical stacks lay out sensibly in a character grid.
+        """
+        if isinstance(child, Spacer):
+            return Size(0.0, 0.0)
+        child_size = child.size_that_fits(Size(cross, float("inf")))
+        # In a terminal every view occupies at least one row.
+        return Size(child_size.width, 1.0)
 
     def _walk_stack(self, stack, origin: Point, size: Size, vertical: bool) -> None:
         children = stack.children()
@@ -187,16 +200,7 @@ class CursesBackend:
             if isinstance(child, Spacer):
                 sizes.append(Size())
                 continue
-            proposal = Size(**{main_attr: float("inf"), cross_attr: cross})
-            child_size = child.size_that_fits(proposal)
-            # Terminal adaptation: controls are single-row tall in a terminal.
-            if isinstance(
-                child,
-                (Button, TextField, Toggle, Slider, Picker, Text, Divider, Image, Stepper, ProgressView),
-            ):
-                if vertical:
-                    child_size = Size(child_size.width, 1.0)
-            sizes.append(child_size)
+            sizes.append(self._measure_child(child, cross))
 
         spacers = [i for i, c in enumerate(children) if isinstance(c, Spacer)]
         spacing = stack._spacing * max(0, len(children) - 1)

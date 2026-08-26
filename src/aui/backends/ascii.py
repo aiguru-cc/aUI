@@ -121,8 +121,8 @@ class AsciiBackend:
             if 0 <= cx < self.width:
                 self._canvas[y][cx] = ch
 
-    def _hline(self, x: int, y: int, length: int) -> None:
-        self._put(x, y, "-" * max(0, length))
+    def _hline(self, x: int, y: int, length: float) -> None:
+        self._put(x, y, "-" * max(0, int(length)))
 
     def _box(self, x: int, y: int, label: str) -> None:
         text = " " + label + " "

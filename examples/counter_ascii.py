@@ -1,4 +1,5 @@
 """Example: a small SwiftUI-style counter app rendered with the headless ASCII backend."""
+import _bootstrap  # noqa: F401
 from aui.backends.ascii import AsciiBackend
 from aui.core.components import Button, Text
 from aui.core.layout import VStack
