@@ -2,11 +2,15 @@
 
 This backend requires no display and no third-party dependencies. It is used
 for tests, documentation examples and headless rendering.
+
+It also exposes the aUI accessibility tree via ``describe_accessibility()``
+so headless tooling and documentation can inspect the semantic structure.
 """
 from __future__ import annotations
 
 from typing import List, Optional
 
+from ..core.accessibility import AccessibilityInfo, describe_accessibility as _describe_accessibility
 from ..core.components import (
     Button,
     DatePicker,
@@ -42,6 +46,10 @@ class AsciiBackend:
         size = Size(self.width, self.height)
         self._draw(view, 0, 0, size)
         return self._snapshot()
+
+    def describe_accessibility(self, view: View) -> AccessibilityInfo:
+        """Return the accessibility tree for ``view`` (headless inspection)."""
+        return _describe_accessibility(view)
 
     # -- Drawing ------------------------------------------------------------
     def _draw(self, view: View, x: int, y: int, size: Size) -> None:

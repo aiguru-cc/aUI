@@ -40,7 +40,7 @@
 - [ ] T22 更多后端（Qt / 终端）
 - [x] T23 更多 SwiftUI 组件（`Stepper`✅、`DatePicker`✅、`ProgressView`✅、`Form`✅、`NavigationStack`✅）
 - [ ] T24 主题与动态类型支持
-- [ ] T25 可访问性（accessibility）支持
+- [x] T25 可访问性（accessibility）支持（label/hint/value/hidden/element 修饰符 + 可访问性树，ADR-0010）
 
 ## 验收标准说明
 

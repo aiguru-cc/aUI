@@ -34,6 +34,7 @@ python3 examples/<name>.py
 | [counter_tk.py](../examples/counter_tk.py) | 计数器 Tk 窗口 | `python3 examples/counter_tk.py` |
 | [gestures_tk.py](../examples/gestures_tk.py) | 手势：点击/长按/拖拽 | `python3 examples/gestures_tk.py` |
 | [animation_tk.py](../examples/animation_tk.py) | 动画：颜色过渡 | `python3 examples/animation_tk.py` |
+| [showcase_tk.py](../examples/showcase_tk.py) | **全功能演示**：全部组件 + 布局 + 修饰符 + 手势 + 动画 + 状态 + 可访问性 + 自定义组件 | `python3 examples/showcase_tk.py` |
 
 > Tk 示例需要 Python 编译 Tk 支持（`import tkinter` 可用）。
 

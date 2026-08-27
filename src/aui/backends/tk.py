@@ -16,6 +16,10 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Callable, Dict, Optional, Set, Tuple, Type
 
+from ..core.accessibility import (
+    AccessibilityInfo,
+    describe_accessibility as _describe_accessibility,
+)
 from ..core.animation import Animation, current_animation
 from ..core.components import (
     Button,
@@ -115,6 +119,36 @@ class TkBackend:
 
     def mainloop(self) -> None:
         self.root.mainloop()
+
+    # -- Accessibility (ADR-0010) -------------------------------------------
+    def describe_accessibility(self) -> AccessibilityInfo:
+        """Return the accessibility tree of the currently rendered view.
+
+        The tree is a pure data structure (roles / labels / hints / values)
+        that any assistive technology or tooling can consume. It is derived
+        from the aUI view tree, not from the Tk widget tree.
+        """
+        if self._current_view is None:
+            return AccessibilityInfo(role="window")
+        return _describe_accessibility(self._current_view)
+
+    def _apply_accessibility(self, widget, view: View) -> None:
+        """Attach Tk's native accessibility attributes to ``widget``.
+
+        Uses the aUI accessibility metadata for ``view`` (label / hint /
+        value / hidden). Tk exposes these via the ``-accessible`` options;
+        when unsupported (older Tk) the attributes are simply ignored.
+        """
+        info = _describe_accessibility(view)
+        try:
+            widget.configure(
+                accessibleName=info.label or None,
+                accessibleDescription=info.hint or None,
+                accessibleValue=info.value or None,
+            )
+        except (tk.TclError, TypeError):
+            # Tk build without accessibility support: ignore gracefully.
+            pass
 
     # -- Drawing ------------------------------------------------------------
     def _draw(
@@ -298,6 +332,7 @@ class TkBackend:
         font = (view._font.family, int(view._font.size))
         label = self._reuse_or_create(path, tk.Label, lambda: tk.Label(parent))
         label.pack(anchor="w")
+        self._apply_accessibility(label, view)
         self._bind_gestures(label, path)
 
         anim = self._animations.get(path)
@@ -355,32 +390,39 @@ class TkBackend:
         btn = self._reuse_or_create(path, ttk.Button, lambda: ttk.Button(parent))
         btn.config(text=view.title, command=view.action)
         btn.pack(anchor="w", pady=2)
+        self._apply_accessibility(btn, view)
         self._bind_gestures(btn, path)
 
     def _make_textfield(self, view: TextField, parent: tk.Widget, path: str) -> None:
         entry = self._reuse_or_create(path, ttk.Entry, lambda: ttk.Entry(parent))
-        entry.pack(fill="x", pady=2)
-        current = entry.get()
-        new_value = view.text.wrapped_value
-        if current != new_value:
-            entry.delete(0, "end")
-            entry.insert(0, new_value)
-
-        def on_change(*_args):
-            view.text.wrapped_value = entry.get()
-
-        entry._aui_trace = getattr(entry, "_aui_trace", None)
-        if entry._aui_trace is not None:
+        # ``ttk.Entry`` has no ``trace_add`` (that is a ``tk.StringVar`` method);
+        # we bind a StringVar via ``textvariable`` and trace *it* so user edits
+        # write back into the aUI ``Binding`` (fixes real-Tk TextField crashes).
+        var = getattr(entry, "_aui_var", None)
+        if var is None:
+            var = tk.StringVar(master=parent)
+            entry._aui_var = var
+        if getattr(var, "_aui_trace", None) is not None:
             try:
-                entry.trace_remove("write", entry._aui_trace)
+                var.trace_remove("write", var._aui_trace)
             except Exception:
                 pass
-        entry._aui_trace = entry.trace_add("write", on_change)
+            var._aui_trace = None
+        var.set(view.text.wrapped_value)
+        entry.config(textvariable=var)
+        entry.pack(fill="x", pady=2)
+        self._apply_accessibility(entry, view)
+
+        def on_change(*_args):
+            view.text.wrapped_value = var.get()
+
+        var._aui_trace = var.trace_add("write", on_change)
 
     def _make_toggle(self, view: Toggle, parent: tk.Widget, path: str) -> None:
         cb = self._reuse_or_create(path, ttk.Checkbutton, lambda: ttk.Checkbutton(parent))
         cb.config(text=view.title)
         cb.pack(anchor="w", pady=2)
+        self._apply_accessibility(cb, view)
         self._bind_gestures(cb, path)
         new_val = bool(view.is_on.wrapped_value) if view.is_on else False
         if cb.instate(["selected"]) != new_val:
@@ -400,6 +442,7 @@ class TkBackend:
         slider = self._reuse_or_create(path, ttk.Scale, lambda: ttk.Scale(parent))
         slider.configure(from_=lo, to=hi)
         slider.pack(fill="x", pady=2)
+        self._apply_accessibility(slider, view)
         if view.value is not None:
             current = slider.get()
             new_val = view.value.wrapped_value
@@ -416,6 +459,7 @@ class TkBackend:
         combo = self._reuse_or_create(path, ttk.Combobox, lambda: ttk.Combobox(parent))
         combo.configure(values=[str(o) for o in view.options])
         combo.pack(fill="x", pady=2)
+        self._apply_accessibility(combo, view)
         if view.selection is not None:
             new_val = str(view.selection.wrapped_value)
             if combo.get() != new_val:
@@ -430,18 +474,21 @@ class TkBackend:
     def _make_divider(self, view: Divider, parent: tk.Widget, path: str) -> None:
         sep = self._reuse_or_create(path, ttk.Separator, lambda: ttk.Separator(parent))
         sep.pack(fill="x", pady=4)
+        self._apply_accessibility(sep, view)
 
     def _make_image(self, view: Image, parent: tk.Widget, path: str) -> None:
         color = view._color.to_tk() if view._color else "gray"
         label = self._reuse_or_create(path, tk.Label, lambda: tk.Label(parent))
         label.config(text="\u25a0", fg=color)
         label.pack()
+        self._apply_accessibility(label, view)
         self._bind_gestures(label, path)
 
     def _make_datepicker(self, view: DatePicker, parent: tk.Widget, path: str) -> None:
         row = self._reuse_or_create(path, ttk.Frame, lambda: ttk.Frame(parent))
         row.pack(fill="x", pady=2)
         # Rebuild the fixed set of children for the date row.
+        self._apply_accessibility(row, view)
         for w in row.winfo_children():
             w.destroy()
         if view.title:
@@ -500,6 +547,7 @@ class TkBackend:
         row = self._reuse_or_create(path, ttk.Frame, lambda: ttk.Frame(parent))
         row.pack(fill="x", pady=2)
         # Rebuild children of the stepper row (small fixed set).
+        self._apply_accessibility(row, view)
         for w in row.winfo_children():
             w.destroy()
         ttk.Label(row, text=view.title).pack(side="left")
@@ -525,6 +573,7 @@ class TkBackend:
             )
             pb.pack(fill="x", pady=2)
             pb.start(20)
+            self._apply_accessibility(pb, view)
         else:
             pb = self._reuse_or_create(
                 path,
@@ -533,6 +582,7 @@ class TkBackend:
             )
             pb.configure(value=view.value)
             pb.pack(fill="x", pady=2)
+            self._apply_accessibility(pb, view)
 
     def _make_navigation(self, view: NavigationStack, parent: tk.Widget, path: str, new_paths: Set[str]) -> None:
         header = self._reuse_or_create(

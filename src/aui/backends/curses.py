@@ -30,6 +30,7 @@ from ..core.components import (
     TextField,
     Toggle,
 )
+from ..core.accessibility import AccessibilityInfo, describe_accessibility as _describe_accessibility
 from ..core.geometry import Color, EdgeInsets, Font, Point, Size
 from ..core.layout import HStack, Spacer, VStack, ZStack
 from ..core.modifiers import TapGestureModifier
@@ -102,6 +103,14 @@ class CursesBackend:
         grid = TerminalGrid(width, height)
         self._draw(view, grid, Point(0, 0), Size(width, height))
         return grid.snapshot()
+
+    def describe_accessibility(self) -> AccessibilityInfo:
+        """Return the accessibility tree of the current view.
+
+        Exposes the aUI accessibility tree (roles / labels / hints /
+        values) for assistive technology and terminal screen readers.
+        """
+        return _describe_accessibility(self._view_factory())
 
     def _main(self, stdscr) -> None:
         try:

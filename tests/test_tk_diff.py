@@ -101,6 +101,34 @@ class FakeTk(FakeWidget):
         return None
 
 
+class FakeStringVar:
+    """Minimal fake of ``tk.StringVar`` with ``textvariable`` trace support."""
+
+    _counter = 0
+
+    def __init__(self, master=None, value=""):
+        FakeStringVar._counter += 1
+        self.master = master
+        self._value = value
+        self._traces = {}
+
+    def set(self, value):
+        self._value = value
+        for cb in list(self._traces.values()):
+            cb()
+
+    def get(self):
+        return self._value
+
+    def trace_add(self, mode, callback):
+        name = f"trace{FakeStringVar._counter}"
+        self._traces[name] = callback
+        return name
+
+    def trace_remove(self, mode, name):
+        self._traces.pop(name, None)
+
+
 def _make_widget_class(name):
     cls = type(name, (FakeWidget,), {})
     return cls
@@ -114,7 +142,7 @@ def _install_mock_tkinter():
     tk_mod.Label = _make_widget_class("Label")
     tk_mod.Frame = _make_widget_class("Frame")
     tk_mod.Canvas = _make_widget_class("Canvas")
-    tk_mod.StringVar = types.SimpleNamespace
+    tk_mod.StringVar = FakeStringVar
     tk_mod.BooleanVar = types.SimpleNamespace
     tk_mod.DoubleVar = types.SimpleNamespace
 
@@ -229,6 +257,28 @@ def test_textfield_keeps_focus_widget(backend):
     backend.render(v2)
     entry2 = backend._widgets["root/0"][1]
     assert entry2 is entry1
+
+
+def test_textfield_edits_write_back_to_binding(backend):
+    """User edits on the Tk Entry propagate to the aUI Binding (Tk backend).
+
+    Regression test: the old implementation called ``entry.trace_add`` which
+    does not exist on ``ttk.Entry`` (it is a ``StringVar`` method), so a real
+    Tk window crashed when it contained a TextField. The backend now binds a
+    ``tk.StringVar`` via ``textvariable`` and traces that instead.
+    """
+    state = State("abc")
+    backend.render(VStack([TextField(state.binding())]))
+    entry = backend._widgets["root/0"][1]
+    var = entry._aui_var
+    assert var is not None, "entry should carry a StringVar"
+
+    var.set("xyz")
+    assert state.wrapped_value == "xyz", "typing should write through to the binding"
+
+    # Re-render keeps the same StringVar (focus / partial-edit preserved).
+    backend.render(VStack([TextField(state.binding())]))
+    assert backend._widgets["root/0"][1]._aui_var is var
 
 
 def test_state_change_diff_updates_only_text(backend):

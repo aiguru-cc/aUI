@@ -1,5 +1,17 @@
 """aUI — a Python UI library that replicates the SwiftUI syntax and features."""
 
+from .core.accessibility import (
+    AccessibilityInfo,
+    CHILDREN_COMBINE,
+    CHILDREN_CONTAIN,
+    CHILDREN_IGNORE,
+    accessibility_element,
+    accessibility_hidden,
+    accessibility_hint,
+    accessibility_label,
+    accessibility_value,
+    describe_accessibility,
+)
 from .core.animation import Animation, animate, current_animation, with_animation
 from .core.gestures import (
     DragGesture,
@@ -45,6 +57,10 @@ from .core.modifiers import (
 __version__ = "0.1.0"
 
 __all__ = [
+    # accessibility
+    "AccessibilityInfo", "CHILDREN_COMBINE", "CHILDREN_CONTAIN", "CHILDREN_IGNORE",
+    "accessibility_element", "accessibility_hidden", "accessibility_hint",
+    "accessibility_label", "accessibility_value", "describe_accessibility",
     # animation
     "Animation", "animate", "current_animation", "with_animation",
     # gestures

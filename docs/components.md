@@ -236,6 +236,63 @@ on_drag_gesture(Text("Drag"), moved)
 - curses 后端：`t` 键循环选中 tappable 区域，Enter 激活
 - 详见 [ADR-0007](adr/0007-gestures.md)
 
+## 可访问性（T25）
+
+声明式可访问性修饰符，让界面可被屏幕阅读器等辅助技术描述与操作。
+修饰符不影响布局，可链式组合。
+
+| 修饰符 | 说明 |
+|---|---|
+| `accessibility_label(view, label)` | 元素的短名称 |
+| `accessibility_hint(view, hint)` | 执行操作的结果描述 |
+| `accessibility_value(view, value)` | 元素的当前值 |
+| `accessibility_hidden(view, hidden=True)` | 从可访问性树排除（含子元素） |
+| `accessibility_element(view, children=...)` | 子元素策略：`contain` / `combine` / `ignore` |
+
+```python
+from aui import (
+    Button, Text, VStack,
+    accessibility_label, accessibility_hint, accessibility_value,
+    accessibility_hidden, accessibility_element, CHILDREN_COMBINE,
+)
+
+# 为按钮提供屏幕阅读器标签
+accessibility_label(Button("X", action=close), "关闭窗口")
+
+# 提供提示与当前值
+accessibility_hint(Button("保存", action=save), "保存你的更改")
+accessibility_value(Text("50%"), "百分之五十")
+
+# 隐藏装饰性元素
+accessibility_hidden(Text("装饰"), True)
+
+# 将子元素合并为单个可访问性元素
+accessibility_element(HStack([Text("姓名"), Text("张三")]), CHILDREN_COMBINE)
+```
+
+内置组件自动获得语义角色与默认值：
+
+- `Toggle` → 值 `on` / `off`
+- `Slider` → 当前数值
+- `TextField` → placeholder 作为标签、输入值作为值
+- `ProgressView` → 百分比 / `indeterminate`
+- `Button` / `Text` / `Picker` / `Stepper` / `DatePicker` → 标题作为标签
+
+### 可访问性树
+
+```python
+from aui import describe_accessibility
+
+info = describe_accessibility(view)   # 纯数据结构（role/label/hint/value/children）
+print(info.summary())                 # 缩进的人类可读描述
+```
+
+- `TkBackend.describe_accessibility()`：返回当前渲染视图的可访问性树，
+  控件创建时自动附加 Tk 原生 `-accessible` 属性
+- `AsciiBackend.describe_accessibility(view)` / `CursesBackend.describe_accessibility()`：
+  无头检查
+- 详见 [ADR-0010](adr/0010-accessibility.md)
+
 ## 自定义组件
 
 继承 `View` 并实现 `size_that_fits` / `place`（或用容器组合）：
