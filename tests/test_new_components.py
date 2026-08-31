@@ -84,14 +84,14 @@ def test_form_place_positions_children():
 
 # -- NavigationStack --------------------------------------------------------
 def test_navigation_stack_header_offset():
-    nav = NavigationStack("Home", Text("body"))
+    nav = NavigationStack(Text("body").navigation_title("Home"))
     size = nav.size_that_fits(Size(200, 200))
     # Header (24) + body height.
     assert size.height > 24.0
 
 
 def test_navigation_stack_children():
-    nav = NavigationStack("Home", Text("body"))
+    nav = NavigationStack(Text("body").navigation_title("Home"))
     assert len(nav.children()) == 1
     assert nav.title == "Home"
 
@@ -112,7 +112,7 @@ def test_ascii_renders_new_components():
 
 
 def test_ascii_renders_navigation_and_form():
-    view = NavigationStack("Settings", Form([Toggle("WiFi"), Button("Save", action=lambda: None)]))
+    view = NavigationStack(Form([Toggle("WiFi"), Button("Save", action=lambda: None)]).navigation_title("Settings"))
     out = AsciiBackend(width=40, height=10).render(view)
     assert "Settings" in out
     assert "WiFi" in out
@@ -137,7 +137,7 @@ def test_curses_renders_new_components():
 
 
 def test_curses_renders_navigation():
-    view = NavigationStack("Home", Text("welcome"))
+    view = NavigationStack(Text("welcome").navigation_title("Home"))
     backend = CursesBackend(lambda: view)
     out = backend.render_to_string(60, 10)
     assert "Home" in out

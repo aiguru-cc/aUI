@@ -47,6 +47,38 @@ class Point:
 
 
 @dataclass(frozen=True)
+class Rect:
+    """A position and size rectangle, mirroring SwiftUI's CGRect values."""
+
+    origin: Point = Point()
+    size: Size = Size()
+
+    @property
+    def min_x(self) -> float:
+        return self.origin.x
+
+    @property
+    def min_y(self) -> float:
+        return self.origin.y
+
+    @property
+    def max_x(self) -> float:
+        return self.origin.x + self.size.width
+
+    @property
+    def max_y(self) -> float:
+        return self.origin.y + self.size.height
+
+    @property
+    def mid_x(self) -> float:
+        return self.origin.x + self.size.width / 2.0
+
+    @property
+    def mid_y(self) -> float:
+        return self.origin.y + self.size.height / 2.0
+
+
+@dataclass(frozen=True)
 class EdgeInsets:
     """Insets for each edge, mirroring SwiftUI EdgeInsets."""
 
@@ -94,7 +126,7 @@ class Color:
         return cls.rgb(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
     def to_tk(self) -> str:
-        """Convert to a '#rrggbb' string for the Tkinter backend."""
+        """Convert to a '#rrggbb' string (used by terminal backends)."""
         def channel(v: float) -> int:
             return max(0, min(255, int(round(v * 255))))
         return "#%02x%02x%02x" % (channel(self.red), channel(self.green), channel(self.blue))

@@ -11,7 +11,7 @@ from typing import Callable, Optional
 
 from .animation import Animation
 from .geometry import Color, EdgeInsets, Font, Point, Size
-from .view import View, ViewModifier, _apply
+from .view import View, ViewModifier, _ModifiedContent, _apply
 
 
 class PaddingModifier(ViewModifier):
@@ -62,6 +62,33 @@ class FontModifier(ViewModifier):
 
     def place(self, content: View, origin: Point, size: Size) -> None:
         content.place(origin, size)
+
+
+def resolve_visual_style_tree(root: View) -> View:
+    """Propagate inheritable visual modifiers to their rendered descendants."""
+    seen = set()
+
+    def visit(node: View, inherited: dict) -> None:
+        if id(node) in seen:
+            return
+        seen.add(id(node))
+        values = dict(inherited)
+        if isinstance(node, _ModifiedContent):
+            modifier = node._modifier
+            if isinstance(modifier, FontModifier):
+                values["font"] = modifier.font
+            elif isinstance(modifier, ForegroundColorModifier):
+                values["foreground_color"] = modifier.color
+        node._resolved_visual_style = values
+        for child in node.children():
+            visit(child, values)
+
+    visit(root, {})
+    return root
+
+
+def visual_style_value(view: View, key: str, default=None):
+    return getattr(view, "_resolved_visual_style", {}).get(key, default)
 
 
 class BorderModifier(ViewModifier):

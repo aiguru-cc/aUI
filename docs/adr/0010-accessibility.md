@@ -35,12 +35,9 @@ picker / image / list / ...）、默认标签、当前值，并折叠可访问�
 
 ### 3. 后端集成
 
-- **Tk**：每个控件创建后调用 `_apply_accessibility`，把 label/hint/value
-  映射到 Tk 原生 `-accessible` 属性（`accessibleName` / 
-  `accessibleDescription` / `accessibleValue`）；不支持时静默忽略。
-  `TkBackend.describe_accessibility()` 返回当前树。
-- **ASCII / curses**：提供 `describe_accessibility()`，用于无头检查与
-  终端屏幕阅读器。
+- **curses**：交互式渲染，焦点/激活状态通过颜色与反显呈现；
+  `describe_accessibility()` 返回当前视图的可访问性树。
+- **ASCII**：提供 `describe_accessibility()`，用于无头检查与文档。
 
 ### 4. 组件语义
 

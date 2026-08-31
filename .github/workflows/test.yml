@@ -1,0 +1,63 @@
+name: Cross-platform tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      appkit_gui_tests:
+        description: Run AppKit tests that create native windows (macOS jobs only)
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      AUI_APPKIT_TESTS: ${{ runner.os == 'macOS' && inputs.appkit_gui_tests && '1' || '0' }}
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install Linux GUI test runtime
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes python3-tk tk-dev xvfb
+      - name: Install aUI and test dependencies
+        run: python -m pip install -e ".[dev]"
+      - name: Verify portable GUI runtime
+        if: runner.os != 'macOS'
+        run: python -c "import tkinter; from aui.backends.standard import StandardBackend; assert StandardBackend.available()"
+      - name: Install native AppKit bridge
+        if: runner.os == 'macOS'
+        run: python -m pip install -e ".[appkit]"
+      - name: Verify source and execute tests
+        if: runner.os != 'Linux'
+        run: |
+          python -m compileall -q src examples tests
+          python -m pytest -q
+      - name: Verify source and execute tests (Xvfb)
+        if: runner.os == 'Linux'
+        run: |
+          python -m compileall -q src examples tests
+          xvfb-run --auto-servernum python -m pytest -q

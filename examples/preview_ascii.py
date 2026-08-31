@@ -5,7 +5,6 @@ or GUI required. Great for documentation, CI and quick visual checks.
 
 Run:  python3 examples/preview_ascii.py
 """
-import _bootstrap  # noqa: F401
 
 from aui.backends.ascii import AsciiBackend
 from aui.core.components import Button, Divider, Form, Picker, Slider, Stepper, Text, TextField, Toggle

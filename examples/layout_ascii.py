@@ -5,7 +5,6 @@ headless ASCII backend so the layout is visible without a terminal.
 
 Run:  python3 examples/layout_ascii.py
 """
-import _bootstrap  # noqa: F401
 from aui.backends.ascii import AsciiBackend
 from aui.core.components import Button, Divider, Text
 from aui.core.layout import HStack, Spacer, VStack, ZStack

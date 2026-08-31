@@ -31,36 +31,7 @@ print(AsciiBackend(width=40, height=10).render(view))
 .venv/bin/python examples/counter_ascii.py
 ```
 
-### 原生窗口（Tkinter 后端）
-
-```python
-from aui import Text, Button, VStack, State
-from aui.backends.tk import TkBackend
-
-state = State(0)
-
-def make_view():
-    return VStack([
-        Text(f"Count: {state.wrapped_value}"),
-        Button("Increment", action=lambda: state._set(state.wrapped_value + 1)),
-    ], spacing=8)
-
-backend = TkBackend()
-backend.render(make_view())
-backend.mainloop()
-```
-
-运行示例：
-
-```bash
-.venv/bin/python examples/counter_tk.py
-```
-
-> Tkinter 后端需要图形显示环境（macOS 桌面 / X11 / Windows），且 Python
-> 需编译 Tk 支持（Homebrew 的 `python-tk`）。若 `import tkinter` 报
-> `No module named '_tkinter'`，请改用 curses 后端。
-
-### 终端交互（curses 后端，推荐默认）
+### 原生窗口（curses 后端 · 推荐默认）
 
 ```python
 from aui import Text, Button, VStack, State
@@ -83,7 +54,7 @@ CursesBackend(make_view).run()
 .venv/bin/python examples/counter_curses.py
 ```
 
-操作：`Tab/↑/↓` 切换输入框焦点，打字编辑，`Enter` 确认，`q` 退出。
+操作：`Tab/↑/↓` 切换焦点，打字编辑，`Enter` 激活，`q` 退出。
 curses 后端零依赖、无需显示服务器，任何终端均可运行。
 
 无头预览（无需终端）：
@@ -92,6 +63,9 @@ curses 后端零依赖、无需显示服务器，任何终端均可运行。
 from aui.backends.curses import CursesBackend
 print(CursesBackend(make_view).render_to_string(80, 15))
 ```
+
+> aUI 不再使用 Tkinter。原生交互窗口由标准库 curses 提供；如需无头
+> 文本渲染用 `AsciiBackend`。
 
 ## 状态管理
 
@@ -160,6 +134,7 @@ class Counter:
 
 ## 已知限制
 
-- Tkinter 后端为整树重建渲染，控件量大时性能下降。
-- 文本测量为近似值（按字符数 × 字体系数估算）。
-- 尚未支持：动画、手势系统、列表懒加载、精确文本换行。
+- curses 后端为整树重绘渲染（终端画布），交互组件量大时性能受终端限制。
+- 文本测量为近似值（按字符宽 × 字体系数估算），CJK 按全角双宽处理。
+- 动画（`.animation()` / `with_animation`）作为声明式元数据保留，状态变化即时重渲染。
+- 尚未支持：主题与动态类型（T24 待办）、更多后端（Qt 等，T22 待办）。

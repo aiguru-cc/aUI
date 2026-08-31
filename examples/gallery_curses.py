@@ -12,7 +12,6 @@ Controls:
     Enter           : confirm current text field
     q / Q           : quit
 """
-import _bootstrap  # noqa: F401
 from aui.backends.curses import CursesBackend
 from aui.core.components import (
     Button,
@@ -41,7 +40,6 @@ def main():
 
     def make_view():
         return NavigationStack(
-            "Component Gallery",
             VStack(
                 [
                     Text("Text component", font=None),
@@ -58,7 +56,7 @@ def main():
                     List([Text("List row 1"), Text("List row 2")]),
                 ],
                 spacing=1,
-            ),
+            ).navigation_title("Component Gallery"),
         )
 
     CursesBackend(make_view).run()

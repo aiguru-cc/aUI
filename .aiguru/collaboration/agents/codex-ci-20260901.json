@@ -1,0 +1,1 @@
+{"id": "codex-ci-20260901", "name": "Codex", "task": "CI 配置完成", "status": "done", "updatedAt": "2026-08-31T20:38:18Z", "processID": 32395, "agentType": "codex", "capabilities": ["message", "file-claim", "task-status"]}

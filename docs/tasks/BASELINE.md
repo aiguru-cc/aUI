@@ -17,13 +17,14 @@
 - [x] T7 布局容器：`VStack/HStack/ZStack/Spacer`
 - [x] T8 修饰符：`padding/background/foregroundColor/font/border/cornerRadius/opacity/hidden/frame/onTapGesture`
 - [x] T9 组件：`Text/Button/TextField/Toggle/Slider/Picker/Image/Divider/List/Group`
-- [x] T10 渲染后端：`AsciiBackend`（无头）、`TkBackend`（Tkinter）
+- [x] T10 渲染后端：`AsciiBackend`（无头）、`TkBackend`（Tkinter）→ **已改：移除 Tk，仅保留 curses + ASCII**
 - [x] T10b 渲染后端：`CursesBackend`（终端交互，零依赖，ADR-0004）
+- [x] T10c **移除 Tk 后端**：全面改用 curses 原生交互后端（无 GUI 依赖），示例/文档/测试同步更新
 
 ## 阶段 3：验证与治理（已建立）
 
 - [x] T11 单元测试（geometry/layout/state/components/ascii backend）
-- [x] T12 示例（`examples/counter_ascii.py`、`examples/counter_tk.py`）
+- [x] T12 示例（`examples/counter_ascii.py`、`examples/counter_curses.py`）
 - [x] T13 ADR 文档（`docs/adr/0001-0003`）
 - [x] T14 文档库（`docs/architecture.md`、`docs/components.md`、`docs/guide.md`）
 - [x] T15 基线任务清单（本文档）
@@ -41,6 +42,9 @@
 - [x] T23 更多 SwiftUI 组件（`Stepper`✅、`DatePicker`✅、`ProgressView`✅、`Form`✅、`NavigationStack`✅）
 - [ ] T24 主题与动态类型支持
 - [x] T25 可访问性（accessibility）支持（label/hint/value/hidden/element 修饰符 + 可访问性树，ADR-0010）
+- [x] T26 **SwiftUI 控件状态**：交互组件支持 focused/disabled 状态；Button
+  使用 destructive/cancel role 与 buttonStyle/controlSize/tint 修饰器；
+  curses 后端键盘焦点导航 + 全局滚动 + 多行文本渲染（`examples/showcase_curses.py`）
 
 ## 验收标准说明
 

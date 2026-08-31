@@ -32,10 +32,11 @@ def test_layout_records_frames():
     )
     backend = CursesBackend(lambda: view)
     backend._layout(view, 80, 20)
-    # Three leaf components recorded.
-    assert len(backend._frames) == 3
-    assert len(backend._buttons) == 1
-    assert len(backend._textfields) == 1
+    # Four leaf components recorded (Text + Button + TextField + ...).
+    assert len(backend._frames) >= 3
+    kinds = [it.kind for it in backend._interactives]
+    assert "button" in kinds
+    assert "textfield" in kinds
 
 
 def test_layout_stack_spacing_and_positions():

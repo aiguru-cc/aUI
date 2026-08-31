@@ -21,12 +21,11 @@ from aui import (
     TextField,
     Toggle,
     VStack,
-    accessibility_element,
-    accessibility_hidden,
-    accessibility_hint,
-    accessibility_label,
-    accessibility_value,
     describe_accessibility,
+)
+from aui.core.accessibility import (
+    accessibility_element, accessibility_hidden, accessibility_hint,
+    accessibility_label, accessibility_value,
 )
 
 
@@ -91,10 +90,9 @@ def test_component_roles():
 
 def test_container_roles():
     view = NavigationStack(
-        "Settings",
         Form([
             List([Text("row1"), Text("row2")]),
-        ]),
+        ]).navigation_title("Settings"),
     )
     info = describe_accessibility(view)
     assert info.role == "navigation"

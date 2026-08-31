@@ -24,4 +24,5 @@ aUI 项目文档索引。
 | [components.md](components.md) | 组件与修饰符参考 |
 | [guide.md](guide.md) | 安装、使用、状态管理、布局指南 |
 | [examples.md](examples.md) | 示例索引与运行说明 |
+| [swiftui-api-migration.md](swiftui-api-migration.md) | Bootstrap/旧链式 API 迁移到 SwiftUI modifier |
 | [tasks/BASELINE.md](tasks/BASELINE.md) | 基线任务清单 |

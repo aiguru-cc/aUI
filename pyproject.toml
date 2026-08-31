@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aui"
 version = "0.1.0"
-description = "aUI — a Python UI library that replicates the SwiftUI syntax and features"
+description = "aUI — a SwiftUI-inspired declarative Python UI library"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "aUI contributors" }]
-keywords = ["ui", "swiftui", "declarative", "tkinter"]
+keywords = ["ui", "swiftui", "declarative", "curses", "terminal"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -20,6 +20,7 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
+appkit = ["pyobjc-framework-Cocoa>=10; sys_platform == 'darwin'"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

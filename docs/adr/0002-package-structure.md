@@ -23,7 +23,7 @@ src/aui/
 │   └── modifiers.py # padding/background/font/... 修饰符
 └── backends/
     ├── ascii.py     # 无头 ASCII 渲染
-    └── tk.py        # Tkinter 渲染
+    └── curses.py    # curses 终端交互（原生）
 ```
 
 - `core` 保持无 GUI 依赖，可独立测试。

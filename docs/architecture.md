@@ -6,7 +6,7 @@ aUI 是一个基于 Python 的声明式 UI 库，复刻 SwiftUI 的语法与功�
 
 - **声明式**：用视图树描述 UI，而非命令式操作控件。
 - **状态驱动**：状态变化自动触发视图刷新。
-- **零依赖**：后端均为 Python 标准库（Tkinter / curses），无第三方依赖。
+- **零依赖**：后端均为 Python 标准库（curses），无第三方依赖、无显示服务器。
 - **可测试**：布局与状态逻辑可在无显示环境运行。
 - **可访问**：界面可被辅助技术描述与操作（ADR-0010）。
 
@@ -27,9 +27,9 @@ aUI 是一个基于 Python 的声明式 UI 库，复刻 SwiftUI 的语法与功�
 │  └─ modifiers: padding/background/font/border/cornerRadius/...
 ├─────────────────────────────────────────────┤
 │ aui.backends（渲染后端，依赖 core）           │
-│  ├─ ascii: 无头 ASCII 渲染（测试/文档）       │
-│  ├─ tk:    Tkinter 原生控件渲染               │
-│  └─ curses: 终端交互 UI（零依赖，推荐默认）    │
+│  ├─ curses: 终端交互 UI（原生，零依赖，推荐）  │
+│  ├─ appkit:  macOS 原生窗口（AppKit/Cocoa，需 PyObjC）│
+│  └─ ascii:  无头文本渲染（测试/文档）         │
 └─────────────────────────────────────────────┘
 ```
 
@@ -43,7 +43,7 @@ aUI 是一个基于 Python 的声明式 UI 库，复刻 SwiftUI 的语法与功�
 
 ### 2. 修饰符链
 
-修饰符是值对象，按应用顺序组合（`padding(...)` 等函数返回新视图）。
+修饰符是值对象，按应用顺序组合（`.padding(...)` 等方法返回新视图）。
 渲染后端解释修饰符。`frame` 因改变布局语义，结构性包装内容（`_Frame`）。
 
 ### 3. 状态驱动
@@ -67,15 +67,32 @@ aUI 是一个基于 Python 的声明式 UI 库，复刻 SwiftUI 的语法与功�
 `accessibilityValue` / `accessibilityHidden` / `accessibilityElement`）以值
 对象附加到视图。`describe_accessibility(view)` 构建纯数据的可访问性树
 （语义角色 / 标签 / 提示 / 当前值），后端将其映射到平台辅助技术：
-Tk 附加原生 `-accessible` 属性；ASCII/curses 提供无头检查。
+curses/ASCII 提供无头检查与终端语义描述。
 详见 [ADR-0010](adr/0010-accessibility.md)。
 
 ### 6. 后端选型
 
-- **curses**（推荐默认）：零依赖、无显示服务器、终端交互。
-- **Tkinter**：原生窗口控件，需 Python 编译 Tk 支持。
+- **curses**（原生默认）：零依赖、无显示服务器、终端交互窗口。
+- **appkit**（macOS 原生窗口）：PyObjC 调 Cocoa，组件映射为原生 `NSControl`，
+  事件回调写回 aUI `Binding`/`State`；需图形会话 + `pyobjc-framework-Cocoa`。
+  **布局宿主**：整棵树在 NSScrollView 的 flipped documentView 中渲染——aUI 的
+  左上原点坐标系与 flipped 视图 1:1 映射，内容按自然高度排版，超出窗口部分
+  由原生滚动条滚动（内容可能数倍高于窗口，例如 showcase 约 4000pt 高而窗口
+  480pt）。控件保持各自自然尺寸（文本按行高、按钮按标题），不被拉伸。
 - **ASCII**：无头渲染，用于测试与文档。
+- Tkinter 后端已移除（不再依赖任何 GUI 框架）。
 详见 [ADR-0004](adr/0004-curses-backend.md)。
+
+### 7. SwiftUI 控件状态与样式
+
+每个交互组件（Button / TextField / Toggle / Slider / Picker / Stepper /
+DatePicker）都渲染出 **normal / focused / active / disabled** 四种状态：
+
+- **disabled**（`.disabled()`）：灰色弱化，不可聚焦、不响应操作；
+- **focused**：键盘焦点高亮（`Tab/↑/↓` 移动）；
+- **active**：`Enter` 激活时；
+- Button 仅接受 SwiftUI 的 `destructive` / `cancel` 语义角色；视觉配置由
+  `buttonStyle`、`controlSize`、`tint`、`disabled` 等环境修饰器负责。
 
 ## 目录结构
 
@@ -83,7 +100,7 @@ Tk 附加原生 `-accessible` 属性；ASCII/curses 提供无头检查。
 src/aui/
 ├── __init__.py      # 公开 API 再导出
 ├── core/            # 无 GUI 核心（accessibility/geometry/view/state/layout/components/modifiers/animation/gestures）
-└── backends/        # ascii.py / tk.py / curses.py
+└── backends/        # ascii.py / curses.py
 docs/
 ├── adr/             # 架构决策记录
 ├── architecture.md  # 本文档

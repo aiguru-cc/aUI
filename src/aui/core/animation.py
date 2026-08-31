@@ -13,6 +13,7 @@ from __future__ import annotations
 import math
 import threading
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 from .geometry import Color, Point, Size
@@ -52,12 +53,46 @@ def animate(animation: Optional["Animation"], fn: Callable[[], Any]) -> Any:
         return fn()
 
 
+@dataclass
+class Transaction:
+    """Animation policy carried with a state mutation."""
+
+    animation: Optional["Animation"] = None
+    disables_animations: bool = False
+    is_continuous: bool = False
+
+
+def current_transaction() -> Optional[Transaction]:
+    return getattr(_animation_context, "transaction", None)
+
+
+@contextmanager
+def with_transaction(transaction: Transaction):
+    if not isinstance(transaction, Transaction):
+        raise TypeError("with_transaction expects a Transaction")
+    previous = getattr(_animation_context, "transaction", None)
+    previous_animation = getattr(_animation_context, "value", None)
+    _animation_context.transaction = transaction
+    _animation_context.value = None if transaction.disables_animations else transaction.animation
+    try:
+        yield
+    finally:
+        _animation_context.transaction = previous
+        _animation_context.value = previous_animation
+
+
 class Animation:
     """A value object describing an animation (duration + easing curve)."""
 
-    def __init__(self, duration: float, curve: str = "easeInOut"):
+    def __init__(self, duration: float, curve: str = "easeInOut", *,
+                 delay: float = 0.0, speed: float = 1.0,
+                 repeat_count: Optional[int] = 1, autoreverses: bool = True):
         self.duration = max(0.0, float(duration))
         self.curve = curve
+        self.delay_seconds = max(0.0, float(delay))
+        self.speed_factor = max(0.0001, float(speed))
+        self.repetitions = None if repeat_count is None else max(1, int(repeat_count))
+        self.autoreverses = bool(autoreverses)
 
     # -- Factories (SwiftUI-style) -----------------------------------------
     @classmethod
@@ -79,6 +114,31 @@ class Animation:
     @classmethod
     def spring(cls, duration: float = 0.4, damping: float = 0.6) -> "Animation":
         return cls(duration, "spring")
+
+    def delay(self, seconds: float) -> "Animation":
+        return Animation(self.duration, self.curve, delay=seconds,
+                         speed=self.speed_factor, repeat_count=self.repetitions,
+                         autoreverses=self.autoreverses)
+
+    def speed(self, factor: float) -> "Animation":
+        return Animation(self.duration, self.curve, delay=self.delay_seconds,
+                         speed=factor, repeat_count=self.repetitions,
+                         autoreverses=self.autoreverses)
+
+    def repeat_count(self, count: int, autoreverses: bool = True) -> "Animation":
+        return Animation(self.duration, self.curve, delay=self.delay_seconds,
+                         speed=self.speed_factor, repeat_count=count,
+                         autoreverses=autoreverses)
+
+    def repeat_forever(self, autoreverses: bool = True) -> "Animation":
+        return Animation(self.duration, self.curve, delay=self.delay_seconds,
+                         speed=self.speed_factor, repeat_count=None,
+                         autoreverses=autoreverses)
+
+    @property
+    def effective_duration(self) -> float:
+        cycles = self.repetitions if self.repetitions is not None else float("inf")
+        return self.delay_seconds + (self.duration / self.speed_factor) * cycles
 
     # -- Easing ------------------------------------------------------------
     def ease(self, t: float) -> float:

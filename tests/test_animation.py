@@ -2,18 +2,16 @@
 with_animation context, animate() and the .animation() modifier.
 
 These tests are GUI-free: they verify the pure value semantics of Animation
-and the modifier plumbing. Tk frame-driving is covered by test_tk_animation.py
-(which runs under a Python with Tkinter).
+and the modifier plumbing. Tk frame-driving was covered by the removed
+Tk backend tests (see git history).
 """
 import pytest
 
 from aui import (
     Animation,
-    animate,
-    animation,
-    current_animation,
     with_animation,
 )
+from aui.core.animation import animate, current_animation
 from aui.core.geometry import Color, Point, Size
 from aui.core.modifiers import AnimationModifier
 
@@ -133,7 +131,7 @@ def test_with_animation_restores_after_exception():
 
 def test_animation_modifier_attaches():
     from aui import Text
-    view = animation(Text("hi"), Animation.ease_in_out(0.5))
+    view = Text("hi").animation(Animation.ease_in_out(0.5))
     mods = view.modifiers
     assert isinstance(mods[-1], AnimationModifier)
     assert mods[-1].animation.duration == 0.5
@@ -142,7 +140,7 @@ def test_animation_modifier_attaches():
 def test_animation_modifier_preserves_layout():
     from aui import Text
     base = Text("hello")
-    animated = animation(base, Animation.ease_in_out(0.3))
+    animated = base.animation(Animation.ease_in_out(0.3))
     assert animated.size_that_fits(Size(200, 200)).width == pytest.approx(
         base.size_that_fits(Size(200, 200)).width
     )
@@ -152,5 +150,5 @@ def test_animation_exported():
     from aui import __all__
     assert "Animation" in __all__
     assert "with_animation" in __all__
-    assert "animate" in __all__
-    assert "animation" in __all__
+    assert "animate" not in __all__
+    assert "animation" not in __all__

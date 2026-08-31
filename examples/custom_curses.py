@@ -12,7 +12,6 @@ Controls:
     Enter           : confirm current text field
     q / Q           : quit
 """
-import _bootstrap  # noqa: F401
 
 from aui.backends.curses import CursesBackend
 from aui.core.components import Button, Text, TextField
