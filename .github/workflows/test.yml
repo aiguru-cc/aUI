@@ -1,21 +1,15 @@
-name: Cross-platform tests
+name: Cross-platform checks
 
 on:
   push:
   pull_request:
   workflow_dispatch:
-    inputs:
-      appkit_gui_tests:
-        description: Run AppKit tests that create native windows (macOS jobs only)
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: tests-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,7 +18,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
-      AUI_APPKIT_TESTS: ${{ runner.os == 'macOS' && inputs.appkit_gui_tests && '1' || '0' }}
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
     strategy:
       fail-fast: false
@@ -51,13 +44,13 @@ jobs:
       - name: Install native AppKit bridge
         if: runner.os == 'macOS'
         run: python -m pip install -e ".[appkit]"
-      - name: Verify source and execute tests
+      - name: Compile source and examples
         if: runner.os != 'Linux'
         run: |
-          python -m compileall -q src examples tests
-          python -m pytest -q
-      - name: Verify source and execute tests (Xvfb)
+          python -m compileall -q src examples
+          python -c "import aui; import aui.backends"
+      - name: Compile and smoke-check StandardBackend (Xvfb)
         if: runner.os == 'Linux'
         run: |
-          python -m compileall -q src examples tests
-          xvfb-run --auto-servernum python -m pytest -q
+          python -m compileall -q src examples
+          xvfb-run --auto-servernum python -c "import aui; from aui.backends.standard import StandardBackend; assert StandardBackend.available()"

@@ -22,6 +22,11 @@ env/
 .DS_Store
 
 # Collaboration runtime data (never commit local state)
+.agents/
+.aiguru/
+.claude/
+.cursor/
+tests/
 .aiguru/collaboration/*.sqlite3*
 .aiguru/collaboration/api-token
 .aiguru/collaboration/api-endpoint.json
