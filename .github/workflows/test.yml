@@ -1,0 +1,56 @@
+name: Cross-platform checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install Linux GUI test runtime
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes python3-tk tk-dev xvfb
+      - name: Install aUI and test dependencies
+        run: python -m pip install -e ".[dev]"
+      - name: Verify portable GUI runtime
+        if: runner.os != 'macOS'
+        run: python -c "import tkinter; from aui.backends.standard import StandardBackend; assert StandardBackend.available()"
+      - name: Install native AppKit bridge
+        if: runner.os == 'macOS'
+        run: python -m pip install -e ".[appkit]"
+      - name: Compile source and examples
+        if: runner.os != 'Linux'
+        run: |
+          python -m compileall -q src examples
+          python -c "import aui; import aui.backends"
+      - name: Compile and smoke-check StandardBackend (Xvfb)
+        if: runner.os == 'Linux'
+        run: |
+          python -m compileall -q src examples
+          xvfb-run --auto-servernum python -c "import aui; from aui.backends.standard import StandardBackend; assert StandardBackend.available()"
