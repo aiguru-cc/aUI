@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Collaboration runtime data (never commit local state)
+.agents/
+.aiguru/
+.claude/
+.cursor/
+tests/
+.aiguru/collaboration/*.sqlite3*
+.aiguru/collaboration/api-token
+.aiguru/collaboration/api-endpoint.json
+.aiguru/collaboration/events/
+.aiguru/collaboration/responses/
+.aiguru/collaboration/processed/
+.aiguru/collaboration/rejected/
+.aiguru/collaboration/claims/
+.aiguru/collaboration/task-leases/
+.aiguru/collaboration/task-locks/
+.aiguru/collaboration/command-ledger/
+.aiguru/collaboration/inbox/
+.aiguru/collaboration/wakeups/
