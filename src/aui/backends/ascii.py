@@ -92,6 +92,15 @@ class AsciiBackend:
     def supports(cls, capability: str) -> bool:
         return capability in cls.CAPABILITIES
 
+    @classmethod
+    def available(cls) -> bool:
+        """ASCII rendering is always available in the standard library."""
+        return True
+
+    @classmethod
+    def availability_reason(cls) -> str:
+        return "available"
+
     def __init__(self, width: int = 60, height: int = 20):
         self.width = width
         self.height = height

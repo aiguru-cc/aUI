@@ -130,11 +130,14 @@ class Counter:
 
 - 自定义组件：继承 `View` 实现 `size_that_fits` / `place`（见 `docs/components.md`）。
 - 自定义后端：实现 `render(view)`，把 aUI 视图树转成目标控件
-  （参考 `src/aui/backends/ascii.py` 与 `tk.py`）。
+  （参考 `src/aui/backends/ascii.py`、`curses.py`、`standard.py`）。
 
 ## 已知限制
 
-- curses 后端为整树重绘渲染（终端画布），交互组件量大时性能受终端限制。
-- 文本测量为近似值（按字符宽 × 字体系数估算），CJK 按全角双宽处理。
-- 动画（`.animation()` / `with_animation`）作为声明式元数据保留，状态变化即时重渲染。
-- 尚未支持：主题与动态类型（T24 待办）、更多后端（Qt 等，T22 待办）。
+- curses 后端为整树重绘渲染（终端画布），交互组件量大时性能受终端限制；
+  `List` 已使用可视窗口虚拟化。
+- 文本测量遵循统一逻辑点/字符网格契约；CJK 按全角双宽处理。
+- 动画在 StandardBackend 上由帧驱动，ASCII/curses 以确定性即时状态呈现。
+- 主题通过 `StandardTheme` / `AppKitTheme` 配置，`font_scale` 与
+  `dynamic_type_size` 提供跨后端动态字体缩放；AppKit 需要可选的 PyObjC，
+  StandardBackend 需要带 tkinter 的 Python 发行版。Qt 等额外后端不在内置范围。

@@ -28,6 +28,15 @@ class AppKitTheme:
     card_border_alpha: float = 0.12
     card_shadow_alpha: float = 0.10
     material: str = "contentBackground"
+    # Shared Dynamic Type scale used for explicit aUI Font values.
+    font_scale: float = 1.0
+
+    def __post_init__(self) -> None:
+        if not 0.5 <= float(self.font_scale) <= 3.0:
+            raise ValueError("font_scale must be between 0.5 and 3.0")
+
+    def scaled_font_size(self, size: float) -> float:
+        return max(8.0, float(size) * self.font_scale)
 
     def with_accent(self, color: Color) -> "AppKitTheme":
         """Return a copy with a custom app accent colour."""

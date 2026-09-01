@@ -239,14 +239,14 @@ class StandardBackend:
         style.configure("AUI.Selected.TFrame", background=accent)
         style.configure("AUI.TFrame", background=background)
         style.configure("AUI.TLabel", background=surface, foreground=primary,
-                        font=(theme.font_family, theme.font_size))
-        style.configure("AUI.TButton", padding=(12, 5), font=(theme.font_family, theme.font_size))
+                        font=(theme.font_family, theme.scaled_font_size()))
+        style.configure("AUI.TButton", padding=(12, 5), font=(theme.font_family, theme.scaled_font_size()))
         style.configure("AUI.TCheckbutton", background=surface, foreground=primary,
-                        font=(theme.font_family, theme.font_size))
+                        font=(theme.font_family, theme.scaled_font_size()))
         style.configure("AUI.Horizontal.TProgressbar", background=accent, troughcolor=background)
         style.configure("AUI.Section.TLabelframe", background=surface, foreground=primary)
         style.configure("AUI.Section.TLabelframe.Label", background=surface, foreground=primary,
-                        font=(theme.font_family, theme.font_size, "bold"))
+                        font=(theme.font_family, theme.scaled_font_size(), "bold"))
 
     def _make_view(self) -> View:
         for cancel in self._observation_cancels:

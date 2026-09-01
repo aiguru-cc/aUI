@@ -403,6 +403,14 @@ class AppKitBackend:
         """True when PyObjC is importable (native window support ready)."""
         return _PYOBJC
 
+    @staticmethod
+    def availability_reason() -> str:
+        """Explain why the native AppKit renderer cannot start, if any."""
+        if _PYOBJC:
+            return "available"
+        detail = f" ({_PYOBJC_IMPORT_ERROR})" if _PYOBJC_IMPORT_ERROR else ""
+        return "PyObjC/AppKit bridge is unavailable" + detail
+
     # Keep this list explicit.  A capability is a public behavioural contract,
     # not a statement that the native toolkit could theoretically implement
     # it.  In particular, receiving drag-and-drop payloads has no AppKit

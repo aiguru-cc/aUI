@@ -21,6 +21,18 @@ class StandardTheme:
     corner_radius: int = 8
     spacing: int = 8
     content_padding: int = 16
+    # SwiftUI Dynamic Type analogue.  A single scale keeps typography
+    # consistent across every native control created by StandardBackend.
+    font_scale: float = 1.0
+
+    def __post_init__(self) -> None:
+        if not 0.5 <= float(self.font_scale) <= 3.0:
+            raise ValueError("font_scale must be between 0.5 and 3.0")
+
+    def scaled_font_size(self, size: float | None = None) -> int:
+        """Return a clamped, platform-friendly point size."""
+        base = self.font_size if size is None else size
+        return max(8, round(float(base) * self.font_scale))
 
 
 DEFAULT_STANDARD_THEME = StandardTheme()

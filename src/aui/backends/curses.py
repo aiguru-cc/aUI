@@ -42,7 +42,10 @@ typing        edit the focused text field
 """
 from __future__ import annotations
 
-import curses
+try:
+    import curses
+except ImportError:  # Windows CPython without the optional windows-curses wheel
+    curses = None  # type: ignore[assignment]
 from datetime import datetime, timedelta
 from typing import Callable, Dict, List as TList, Optional, Tuple
 
@@ -211,7 +214,25 @@ class CursesBackend:
     def supports(cls, capability: str) -> bool:
         return capability in cls.CAPABILITIES
 
+    @classmethod
+    def available(cls) -> bool:
+        """Return whether the platform exposes a usable curses module.
+
+        Windows obtains curses through the optional ``windows-curses`` wheel;
+        macOS/Linux ship it with CPython.  Import is performed at module load,
+        so this remains a cheap deterministic capability query.
+        """
+        return curses is not None
+
+    @classmethod
+    def availability_reason(cls) -> str:
+        return "available" if cls.available() else "Python curses module is unavailable"
+
     def __init__(self, view_factory: Callable[[], View]):
+        if not self.available():
+            raise RuntimeError(
+                "CursesBackend requires Python curses; install windows-curses on Windows"
+            )
         self._view_factory = view_factory
         self._view: Optional[View] = None
         self._frames: Dict[int, Tuple[Point, Size]] = {}

@@ -21,6 +21,11 @@ classifiers = [
 [project.optional-dependencies]
 dev = ["pytest>=7"]
 appkit = ["pyobjc-framework-Cocoa>=10; sys_platform == 'darwin'"]
+windows = ["windows-curses>=2.4; sys_platform == 'win32'"]
+all = [
+    "pyobjc-framework-Cocoa>=10; sys_platform == 'darwin'",
+    "windows-curses>=2.4; sys_platform == 'win32'",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

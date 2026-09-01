@@ -17,9 +17,9 @@
 - [x] T7 布局容器：`VStack/HStack/ZStack/Spacer`
 - [x] T8 修饰符：`padding/background/foregroundColor/font/border/cornerRadius/opacity/hidden/frame/onTapGesture`
 - [x] T9 组件：`Text/Button/TextField/Toggle/Slider/Picker/Image/Divider/List/Group`
-- [x] T10 渲染后端：`AsciiBackend`（无头）、`TkBackend`（Tkinter）→ **已改：移除 Tk，仅保留 curses + ASCII**
+- [x] T10 渲染后端：`AsciiBackend`（无头）、`StandardBackend`（跨平台 tkinter 桌面控件）
 - [x] T10b 渲染后端：`CursesBackend`（终端交互，零依赖，ADR-0004）
-- [x] T10c **移除 Tk 后端**：全面改用 curses 原生交互后端（无 GUI 依赖），示例/文档/测试同步更新
+- [x] T10c **移除旧 `TkBackend`**：保留统一的 `StandardBackend` 桌面后端与 `CursesBackend` 终端后端，示例/文档/测试同步更新
 
 ## 阶段 3：验证与治理（已建立）
 
@@ -38,9 +38,10 @@
 - [x] T19 动画与过渡
 - [x] T20 手势系统（tap/long-press/drag，ADR-0007）
 - [x] T21 `List` 懒加载与滚动
-- [ ] T22 更多后端（Qt / 终端）
+- [ ] T22 更多后端（Qt 等；终端 curses 与原生 AppKit/Standard 已提供）
 - [x] T23 更多 SwiftUI 组件（`Stepper`✅、`DatePicker`✅、`ProgressView`✅、`Form`✅、`NavigationStack`✅）
-- [ ] T24 主题与动态类型支持
+- [x] T24 主题与动态类型支持（Standard/AppKit 主题令牌、`font_scale` 与
+  `dynamic_type_size` Environment 修饰器均已提供）
 - [x] T25 可访问性（accessibility）支持（label/hint/value/hidden/element 修饰符 + 可访问性树，ADR-0010）
 - [x] T26 **SwiftUI 控件状态**：交互组件支持 focused/disabled 状态；Button
   使用 destructive/cancel role 与 buttonStyle/controlSize/tint 修饰器；
