@@ -244,8 +244,9 @@ try:  # pragma: no cover - depends on the machine
     )
 
     _PYOBJC = True
-except Exception:  # pragma: no cover - depends on the machine
+except Exception as exc:  # pragma: no cover - depends on the machine
     _PYOBJC = False
+    _PYOBJC_IMPORT_ERROR = str(exc)
 
     # Keep geometry helpers patchable on non-macOS backends.  The reconciliation
     # tests replace this symbol with a tuple-producing stub; defining it here

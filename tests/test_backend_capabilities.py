@@ -44,6 +44,15 @@ def test_all_builtin_backends_expose_availability_contract():
     assert standard_available() == StandardBackend.available()
 
 
+def test_appkit_unavailable_reason_is_safe_without_pyobjc(monkeypatch):
+    import aui.backends.appkit as appkit
+    monkeypatch.setattr(appkit, "_PYOBJC", False)
+    monkeypatch.setattr(appkit, "_PYOBJC_IMPORT_ERROR", "simulated missing bridge", raising=False)
+    reason = appkit.AppKitBackend.availability_reason()
+    assert "unavailable" in reason
+    assert "simulated missing bridge" in reason
+
+
 def test_backend_capabilities_are_explicit_and_queryable():
     assert AppKitBackend.supports(Capability.NATIVE_SYMBOLS)
     assert AppKitBackend.supports(Capability.SPLIT_DIVIDER_DRAG)
