@@ -54,3 +54,23 @@ jobs:
         run: |
           python -m compileall -q src examples
           xvfb-run --auto-servernum python -c "import aui; from aui.backends.standard import StandardBackend; assert StandardBackend.available()"
+      - name: Run test suite
+        if: runner.os != 'Linux'
+        run: python -m pytest -q
+      - name: Run test suite (Xvfb)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum python -m pytest -q
+      - name: Build and close a StandardBackend window
+        if: runner.os == 'Windows'
+        run: >
+          python -c "import tkinter as tk; from aui.backends.standard import StandardBackend;
+          from aui.core.components import Text; backend = StandardBackend(lambda: Text('smoke'));
+          root = tk.Tk(); root.withdraw(); backend._start_window(root, 320, 240, 'aUI smoke');
+          backend.close()"
+      - name: Build and close a StandardBackend window (Xvfb)
+        if: runner.os == 'Linux'
+        run: >
+          xvfb-run --auto-servernum python -c "import tkinter as tk;
+          from aui.backends.standard import StandardBackend; from aui.core.components import Text;
+          backend = StandardBackend(lambda: Text('smoke')); root = tk.Tk(); root.withdraw();
+          backend._start_window(root, 320, 240, 'aUI smoke'); backend.close()"

@@ -9,8 +9,10 @@ require an interactive macOS desktop session). They verify:
 * the shared ``make_view()`` builds a tree usable by every backend.
 
 Native window construction requires a graphical macOS session.  The tests are
-therefore opt-in through ``AUI_APPKIT_TESTS=1``; PyObjC-only bridge tests stay
-safe to run without a window server.
+therefore opt-in through ``AUI_APPKIT_WINDOW_TESTS=1``; PyObjC-only bridge
+tests stay safe to run without a window server.  PyObjC can terminate the
+process (rather than raise an exception) when ``NSWindow`` is constructed in a
+headless launch context, so this must be a deliberate desktop-only opt-in.
 """
 import os
 import sys
@@ -49,9 +51,12 @@ from aui.backends import appkit as appkit_mod  # noqa: E402
 
 
 _APPKIT_WINDOW_TESTS = (
-    appkit_mod._PYOBJC and os.environ.get("AUI_APPKIT_TESTS") == "1"
+    appkit_mod._PYOBJC and os.environ.get("AUI_APPKIT_WINDOW_TESTS") == "1"
 )
-_WINDOW_TEST_REASON = "requires PyObjC and AUI_APPKIT_TESTS=1 in a graphical macOS session"
+_WINDOW_TEST_REASON = (
+    "requires PyObjC, a graphical macOS session, and "
+    "AUI_APPKIT_WINDOW_TESTS=1"
+)
 
 
 # ---------------------------------------------------------------------------
