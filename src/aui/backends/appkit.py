@@ -247,6 +247,13 @@ try:  # pragma: no cover - depends on the machine
 except Exception:  # pragma: no cover - depends on the machine
     _PYOBJC = False
 
+    # Keep geometry helpers patchable on non-macOS backends.  The reconciliation
+    # tests replace this symbol with a tuple-producing stub; defining it here
+    # also gives portable callers a deterministic value without importing
+    # Foundation or attempting to initialise AppKit.
+    def NSMakeRect(x, y, width, height):
+        return (x, y, width, height)
+
     def _IBAction(method):
         """No-op decorator so the module imports cleanly without PyObjC.
 
