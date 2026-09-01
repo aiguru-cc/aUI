@@ -141,6 +141,9 @@ class StandardBackend:
         self._disappear_actions: list[Callable[[], None]] = []
         self._change_values: dict = {}
         self._submit_modifier: Optional[OnSubmitModifier] = None
+        # Renderer-local context used to give NavigationSplitView sidebars
+        # list-row styling without changing ordinary Button semantics.
+        self._split_column_context: Optional[int] = None
 
     @staticmethod
     def available() -> bool:
@@ -233,6 +236,14 @@ class StandardBackend:
     def _configure_styles(self) -> None:
         style = ttk.Style(self._root)
         theme = self.theme
+        # The host's default ttk theme varies substantially across macOS,
+        # Linux and Windows.  Clam gives us a stable baseline before applying
+        # the semantic SwiftUI-like colours below.
+        try:
+            if "clam" in style.theme_names():
+                style.theme_use("clam")
+        except Exception:
+            pass
         background, surface = color_hex(theme.background), color_hex(theme.surface)
         primary, accent = color_hex(theme.primary), color_hex(theme.accent)
         style.configure("AUI.Surface.TFrame", background=surface)
@@ -240,13 +251,29 @@ class StandardBackend:
         style.configure("AUI.TFrame", background=background)
         style.configure("AUI.TLabel", background=surface, foreground=primary,
                         font=(theme.font_family, theme.scaled_font_size()))
-        style.configure("AUI.TButton", padding=(12, 5), font=(theme.font_family, theme.scaled_font_size()))
+        style.configure("AUI.TButton", padding=(12, 6), font=(theme.font_family, theme.scaled_font_size()),
+                        background=surface, foreground=primary, borderwidth=1,
+                        relief="solid", focusthickness=1, focuscolor=accent)
+        style.map("AUI.TButton", background=[("pressed", accent), ("active", "#eef5ff"), ("disabled", background)],
+                  foreground=[("pressed", "white"), ("disabled", color_hex(theme.secondary))])
         style.configure("AUI.TCheckbutton", background=surface, foreground=primary,
                         font=(theme.font_family, theme.scaled_font_size()))
         style.configure("AUI.Horizontal.TProgressbar", background=accent, troughcolor=background)
         style.configure("AUI.Section.TLabelframe", background=surface, foreground=primary)
         style.configure("AUI.Section.TLabelframe.Label", background=surface, foreground=primary,
                         font=(theme.font_family, theme.scaled_font_size(), "bold"))
+        style.configure("AUI.TNotebook", background=background, borderwidth=0,
+                        tabmargins=(0, 0, 0, 0))
+        style.configure("AUI.TNotebook.Tab", padding=(14, 7),
+                        font=(theme.font_family, theme.scaled_font_size()))
+        style.configure("AUI.Sidebar.TButton", padding=(10, 7),
+                        font=(theme.font_family, theme.scaled_font_size()),
+                        background=surface, foreground=primary, borderwidth=0,
+                        relief="flat", anchor="w", focusthickness=1, focuscolor=accent)
+        style.map("AUI.Sidebar.TButton",
+                  background=[("active", "#e8f1ff"), ("pressed", "#dbeaff"),
+                              ("disabled", background)],
+                  foreground=[("disabled", color_hex(theme.secondary))])
 
     def _make_view(self) -> View:
         for cancel in self._observation_cancels:
@@ -684,7 +711,9 @@ class StandardBackend:
             elif isinstance(view, DismissWindowLink):
                 view.connect(getattr(self, "_dismiss_window_action", None))
             title = self._symbol_text(view.system_name) or view.title if isinstance(view, IconButton) else view.title
-            widget = ttk.Button(parent, text=title, command=view.action, style="AUI.TButton",
+            button_style = ("AUI.Sidebar.TButton" if self._split_column_context == 0
+                            else "AUI.TButton")
+            widget = ttk.Button(parent, text=title, command=view.action, style=button_style,
                                 state="normal" if is_enabled(view) else "disabled")
             widget.pack(anchor="w")
             self._register_widget(view, widget)
@@ -1616,7 +1645,12 @@ class StandardBackend:
             pane = ttk.Frame(paned, style="AUI.Surface.TFrame", width=int(width),
                              padding=self.theme.spacing)
             paned.add(pane, weight=1 if index == len(children) - 1 else 0)
-            self._build(content, pane)
+            previous_column = self._split_column_context
+            self._split_column_context = index
+            try:
+                self._build(content, pane)
+            finally:
+                self._split_column_context = previous_column
         paned.bind("<ButtonRelease-1>", lambda _event, source=paned, key=split_key,
                    model=view: self._remember_split_sashes(source, model, key), add=True)
 

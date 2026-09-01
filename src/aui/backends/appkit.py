@@ -1086,8 +1086,10 @@ class AppKitBackend:
             bar = NSBox.alloc().initWithFrame_(NSMakeRect(x, y, fsize.width, fsize.height))
             bar.setBoxType_(NSBoxCustom)
             bar.setTitlePosition_(NSNoTitle)
-            bar.setBorderWidth_(0)
-            bar.setFillColor_(NSColor.controlBackgroundColor())
+            # Keep the toolbar on the window surface instead of making it
+            # look like a second opaque form card.
+            bar.setBorderWidth_(0.0)
+            bar.setFillColor_(NSColor.windowBackgroundColor())
             parent.addSubview_(bar)
             self._build_container(view, parent, origin, size)
             return
@@ -2077,18 +2079,20 @@ class AppKitBackend:
         if modifier is None or not modifier.items:
             return
         from AppKit import (
+            NSLayoutAttributeLeft,
             NSLayoutAttributeRight,
             NSStackView,
             NSTitlebarAccessoryViewController,
             NSUserInterfaceLayoutOrientationHorizontal,
         )
-        buttons = []
-        toolbar_width = 0.0
+        leading_buttons = []
+        trailing_buttons = []
         for item in modifier.items:
             button_width = 30.0 if item.system_name else max(56.0, len(item.label) * 8.0 + 22.0)
-            button = NSButton.alloc().initWithFrame_(NSMakeRect(0, 0, button_width, 26))
+            button = NSButton.alloc().initWithFrame_(NSMakeRect(0, 0, button_width, 28))
             button.setTitle_("" if item.system_name else item.label)
-            button.setBordered_(True)
+            # Toolbar actions are title-bar commands, not form controls.
+            button.setBordered_(False)
             button.setEnabled_(item.is_enabled)
             button.setToolTip_(item.label)
             if item.system_name:
@@ -2098,25 +2102,40 @@ class AppKitBackend:
                         item.system_name, item.label
                     )
                     if image is not None:
+                        image.setSize_((18.0, 18.0))
                         button.setImage_(image)
                 except Exception:
                     pass
+            try:
+                from AppKit import NSControlSizeSmall
+                button.setControlSize_(NSControlSizeSmall)
+                button.setContentTintColor_(NSColor.labelColor())
+                button.setFont_(NSFont.systemFontOfSize_(13.0))
+            except Exception:
+                pass
             button.setTarget_(self._bridge)
             button.setAction_("toolbarItemPressed:")
             self._apply_shortcut(button, item.shortcut)
             self._toolbar_items.append((button, item))
-            buttons.append(button)
-            toolbar_width += button_width
-        stack = NSStackView.stackViewWithViews_(buttons)
-        stack.setOrientation_(NSUserInterfaceLayoutOrientationHorizontal)
-        stack.setSpacing_(6.0)
-        stack.setFrame_(NSMakeRect(0, 0, toolbar_width + 6.0 * max(0, len(buttons) - 1), 28.0))
-        controller = NSTitlebarAccessoryViewController.alloc().init()
-        controller.setView_(stack)
-        controller.setFullScreenMinHeight_(28.0)
-        controller.setLayoutAttribute_(NSLayoutAttributeRight)
-        self._window.addTitlebarAccessoryViewController_(controller)
-        self._toolbar_accessories.append(controller)
+            (leading_buttons if item.placement == "navigation" else trailing_buttons).append(button)
+
+        def install_group(buttons, layout_attribute):
+            if not buttons:
+                return
+            toolbar_width = sum(float(button.frame().size.width) for button in buttons)
+            stack = NSStackView.stackViewWithViews_(buttons)
+            stack.setOrientation_(NSUserInterfaceLayoutOrientationHorizontal)
+            stack.setSpacing_(6.0)
+            stack.setFrame_(NSMakeRect(0, 0, toolbar_width + 6.0 * max(0, len(buttons) - 1), 30.0))
+            controller = NSTitlebarAccessoryViewController.alloc().init()
+            controller.setView_(stack)
+            controller.setFullScreenMinHeight_(30.0)
+            controller.setLayoutAttribute_(layout_attribute)
+            self._window.addTitlebarAccessoryViewController_(controller)
+            self._toolbar_accessories.append(controller)
+
+        install_group(leading_buttons, NSLayoutAttributeLeft)
+        install_group(trailing_buttons, NSLayoutAttributeRight)
 
     def _apply_shortcut(self, control, shortcut) -> None:
         if shortcut is None:
